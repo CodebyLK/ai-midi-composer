@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Midi Composer</title>
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+    <h1>AI Midi Composer</h1>
+
+    <div id="visualizer-viewport">
+        <div id="playhead"></div> 
+        <div id="visualizer-canvas"></div>
+    </div>
+    
+    <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression in C minor" />
+    
+    <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; justify-content: center;">
+        <div>
+            <label for="tempo-slider">Tempo: <span id="tempo-display">120</span> BPM</label>
+            <input type="range" id="tempo-slider" min="60" max="200" value="120" />
+        </div>
+        <div>
+            <label for="length-select">Length:</label>
+            <select id="length-select" style="padding: 5px; border-radius: 4px; background: #2a2a35; color: white;">
+                <option value="4 bars">4 Bars</option>
+                <option value="8 bars" selected>8 Bars</option>
+                <option value="16 bars">16 Bars</option>
+            </select>
+        </div>
+        <div>
+            <label for="instrument-select">Instrument:</label>
+            <select id="instrument-select" style="padding: 5px; border-radius: 4px; background: #2a2a35; color: white;">
+                <option value="1" selected>Acoustic Grand Piano</option>
+                <option value="25">Acoustic Guitar</option>
+                <option value="40">Synth Bass</option>
+                <option value="41">Violin</option>
+                <option value="57">Trumpet</option>
+                <option value="74">Flute</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="generate-btn">Generate New AI Melody</button>
+        <button id="play-btn">▶ Play Current</button>
+        <button id="clear-btn">🗑 Clear Grid</button> <button id="export-btn" disabled>Download MIDI</button>
+    </div>
+
+    <div class="recorder-section" style="margin-top: 20px; padding: 15px; border-radius: 8px; width: 100%; max-width: 400px; text-align: center;">
+        <button id="record-btn">🎤 Record Real Piano</button>
+        <div style="margin-top: 10px;">
+            <span id="recording-status" style="display:none; color: #ff4757; font-weight: bold;">🔴 Recording...</span>
+        </div>
+        <audio id="audio-playback" controls style="display:none; margin-top:10px; width: 100%;"></audio>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

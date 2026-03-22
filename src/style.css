@@ -1,0 +1,201 @@
+/* --- YOUR BASE STYLES (Restored!) --- */
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #1e1e24;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+}
+
+h1 {
+  color: #646cff;
+  margin-bottom: 2rem;
+}
+
+/* --- THE VISUALIZER --- */
+#visualizer-viewport {
+  width: 100%;
+  max-width: 800px;
+  height: 350px;
+  background-color: #121217;
+  border: 2px solid #333;
+  border-radius: 12px;
+  position: relative;
+  margin-bottom: 20px;
+  
+  overflow-x: auto; /* Allows horizontal scrolling */
+  overflow-y: hidden;
+}
+
+/* Hide scrollbar for Chrome/Safari */
+#visualizer-viewport::-webkit-scrollbar {
+  height: 14px;
+  display: block; /* Overrides the old 'none' */
+}
+
+#visualizer-viewport::-webkit-scrollbar-track {
+  background: #1a1a24;
+  border-radius: 0 0 10px 10px;
+}
+
+#visualizer-viewport::-webkit-scrollbar-thumb {
+  background: #4b4b5e;
+  border-radius: 10px;
+  border: 2px solid #1a1a24; /* Creates a nice padded look */
+}
+
+#visualizer-viewport::-webkit-scrollbar-thumb:hover {
+  background: #646cff; /* Lights up purple when you grab it */
+}
+
+#visualizer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  /* Width set dynamically in JS */
+  
+  /* FIXED: Visible lines every 20 pixels */
+  background-image: linear-gradient(#333 1px, transparent 1px);
+  background-size: 100% 20px;
+  
+  /* Ensures the lines start at the right vertical offset */
+  background-position: 0 0;
+}
+
+#playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background-color: #ff4757;
+  box-shadow: 0 0 15px #ff4757;
+  z-index: 10;
+  display: none;
+  /* Sync settings */
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-play-state: paused;
+}
+
+@keyframes movePlayhead {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--scroll-width)); }
+}
+
+.note-block {
+  position: absolute;
+  background: linear-gradient(to bottom, #646cff, #535bf2);
+  border: 1px solid #ffffff33;
+  border-radius: 4px;
+  box-shadow: 0 0 8px #646cff66;
+  cursor: grab;
+  
+  /* Safari Support for non-selectable text/blocks */
+  -webkit-user-select: none; 
+  user-select: none;
+  
+  touch-action: none;
+  transition: filter 0.1s ease;
+}
+
+.note-block:active {
+  cursor: grabbing;
+  filter: brightness(1.2); /* Light up the note while moving it */
+  z-index: 100; /* Ensure the note stays on top of others while dragging */
+}
+
+/* --- YOUR UI CONTROLS --- */
+#prompt-input {
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background-color: #2a2a35;
+  color: white;
+  width: 300px;
+  margin: 20px 0 20px;
+}
+
+#generate-btn, #export-btn, #record-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  background-color: #646cff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#generate-btn:hover, #export-btn:hover {
+  background-color: #535bf2;
+}
+
+#generate-btn:disabled, #export-btn:disabled, #record-btn:disabled {
+  background-color: #444;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#record-btn {
+  background-color: #ff4757;
+}
+
+#record-btn:hover {
+  background-color: #ff6b7a;
+}
+
+
+/* Container for the main action buttons */
+.controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+/* Specific style for the Play button */
+#play-btn {
+    background-color: #00b894; /* A cleaner, professional "DAW" green */
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#play-btn:hover {
+    background-color: #55efc4; /* Lights up when you hover */
+    transform: translateY(-1px); /* Subtle lift effect */
+}
+
+#play-btn:active {
+    transform: translateY(1px); /* Sinks when clicked */
+}
+
+
+#clear-btn {
+    background-color: #4b4b5e; /* Neutral gray-blue */
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#clear-btn:hover {
+    background-color: #ff4757; /* Turns red when you hover to warn of deletion */
+}
