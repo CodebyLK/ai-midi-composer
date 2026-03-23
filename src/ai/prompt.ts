@@ -1,53 +1,33 @@
-import type { Melody } from '../types';
+import type { Note } from '../types';
 
-export async function generateMelody(userInput: string, tempo: number, length: string): Promise<Melody> {
-  const systemPrompt = `
-    You are an expert composer.
-    Generate a musical progression based on: "${userInput}". 
-    
-    CRITICAL RULES:
-    1. The composition MUST be exactly ${length} long.
-    2. The tempo MUST be exactly ${tempo} BPM.
-    3. DO NOT include any comments (like // or /* */) in your response. Return pure, valid JSON only.
-    
-    You MUST return ONLY valid JSON matching this exact structure: 
-    { "tempo": number, "key": string, "notes": [{ "pitches": string[], "duration": number, "velocity": number }] }
-    
-    Tip: To play a chord, put multiple notes in the "pitches" array like ["C4", "E4", "G4"]. For a single melody note, use one like ["C4"].
+export async function generateMelody(userInput: string, tempo: number, length: string): Promise<Note[]> {
+    const systemPrompt = `
+    You are an expert composer. Generate a progression based on: "${userInput}". 
+    CRITICAL: The composition must be ${length} long at ${tempo} BPM.
+    Return ONLY a JSON array of notes. No conversational text.
+    Each note MUST include: "pitches" (string[]), "duration" (number in beats), "startTime" (number in beats), and "velocity" (0-127).
+    Example: [{"pitches":["C4"],"duration":1,"startTime":0,"velocity":100}]
   `;
 
-  // (Paste your AIza... key back in here!)
-  const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contents: [{ 
-        parts: [{ text: systemPrompt }] 
-      }]
-    })
-  });
+    // RESTORED: Back to your original gemini-2.5-flash model!
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
-  const data = await response.json();
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+    });
 
-  if (!response.ok) {
-      throw new Error(`Gemini API Error: ${data.error?.message || response.statusText}`);
-  }
+    const data = await response.json();
+    if (!response.ok) throw new Error(`${data.error?.message || response.statusText}`);
 
-  const rawContent = data.candidates[0].content.parts[0].text;
-  
-  // 1. Remove markdown tags
-  let cleanedContent = rawContent.replace(/```json|```/gi, '').trim();
-  
-  // 2. NEW: Scrub out any single-line comments (//) the AI might have snuck in
-  cleanedContent = cleanedContent.replace(/\/\/.*$/gm, '');
+    const rawContent = data.candidates[0].content.parts[0].text;
 
-  // 3. Parse the safely cleaned text
-  const parsedMelody: Melody = JSON.parse(cleanedContent);
-  
-  return parsedMelody;
+    // Force the parser to ONLY grab what is inside the array brackets
+    const match = rawContent.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error("AI did not return a valid JSON array.");
+
+    return JSON.parse(match[0]);
 }

@@ -1,41 +1,31 @@
 import MidiWriter from 'midi-writer-js';
-import type { Melody, Note } from '../types';
+import type { Project, Note, Track } from '../types';
 
-function getMidiDuration(beats: number): string {
-    const midiDur = Math.round(4 / beats);
-    return midiDur.toString();
-}
+export function downloadMidi(project: Project, filename = 'ai-composition.mid') {
+    const writerTracks: any[] = [];
 
-// NEW: We added `instrumentNumber` as an argument, defaulting to 1 (Piano)
-export function downloadMidi(melody: Melody, instrumentNumber: number = 1, filename = 'ai-composer.mid') {
-    const track = new MidiWriter.Track();
+    // Loop through every track (Piano, Bass, etc.) to create a multi-track MIDI
+    project.tracks.forEach((trackData: Track) => {
+        const midiTrack = new MidiWriter.Track();
+        midiTrack.setTempo(project.tempo);
 
-    track.setTempo(melody.tempo);
+        // Set the instrument for this specific MIDI track
+        midiTrack.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: trackData.instrument }));
 
-    // NEW: Inject the Program Change Event to set the instrument
-    track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: instrumentNumber }));
-
-    melody.notes.forEach((note: Note) => {
-        const durationInBeats = note.duration || 1;
-        const midiDuration = getMidiDuration(durationInBeats);
-
-        const midiEvent = new MidiWriter.NoteEvent({
-            pitch: note.pitches,
-            duration: midiDuration,
-            velocity: note.velocity || 100
+        trackData.notes.forEach((note: Note) => {
+            midiTrack.addEvent(new MidiWriter.NoteEvent({
+                pitch: note.pitches,
+                duration: `T${note.duration * 128}`, // High-resolution ticks
+                startTick: note.startTime * 128,    // Essential for timeline positioning
+                velocity: note.velocity || 100
+            }));
         });
-
-        track.addEvent(midiEvent);
+        writerTracks.push(midiTrack);
     });
 
-    const write = new MidiWriter.Writer(track);
-    const base64String = write.base64();
-
-    const uri = 'data:audio/midi;base64,' + base64String;
+    const writer = new MidiWriter.Writer(writerTracks);
     const link = document.createElement('a');
-    link.href = uri;
+    link.href = writer.dataUri();
     link.download = filename;
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
 }

@@ -1,86 +1,165 @@
-import { 
-    BasicPitch, 
-    addPitchBendsToNoteEvents, 
-    noteFramesToTime, 
-    outputToNotesPoly 
+import {
+    BasicPitch,
+    addPitchBendsToNoteEvents,
+    noteFramesToTime,
+    outputToNotesPoly
 } from '@spotify/basic-pitch';
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-wasm';
+import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm';
 import type { Note } from '../types';
 
-const MIDI_TO_PITCH: Record<number, string> = {
-    60: "C4", 61: "C#4", 62: "D4", 63: "D#4", 64: "E4", 65: "F4",
-    66: "F#4", 67: "G4", 68: "G#4", 69: "A4", 70: "A#4", 71: "B4",
-    72: "C5", 73: "C#5", 74: "D5", 75: "D#5", 76: "E5", 77: "F5",
-    78: "F#5", 79: "G5"
-};
+// Converts MIDI numbers to string notation (C4, G#3, etc.)
+function midiToPitch(midi: number): string {
+    const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const octave = Math.floor(midi / 12) - 1;
+    const noteName = notes[midi % 12];
+    return `${noteName}${octave}`;
+}
 
 export async function convertAudioToNotes(audioUrl: string, tempo: number): Promise<Note[]> {
-    console.log("Loading Basic Pitch Model...");
-    
-    // 1. Initialize the Spotify Basic Pitch model using the public URL
+    console.log("Configuring Machine Learning Backend...");
+
+    try {
+        setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/');
+        await tf.setBackend('wasm');
+        await tf.ready();
+    } catch (e) {
+        console.warn("Could not force WASM backend, proceeding with default...", e);
+    }
+
     const basicPitch = new BasicPitch('https://unpkg.com/@spotify/basic-pitch@1.0.1/model/model.json');
-    
-    // 2. Fetch the audio file you just recorded
     const response = await fetch(audioUrl);
     const audioArrayBuffer = await response.arrayBuffer();
-
-    // 3. Decode it into raw audio data 
-    // basic-pitch requires exactly 22050Hz sample rate to work
     const audioCtx = new window.AudioContext({ sampleRate: 22050 });
-    const audioBuffer = await audioCtx.decodeAudioData(audioArrayBuffer);
+    let audioBuffer = await audioCtx.decodeAudioData(audioArrayBuffer);
 
-    console.log("Evaluating audio...");
-    
-    // Setup arrays to catch the streaming ML data
+    if (audioBuffer.numberOfChannels > 1) {
+        const monoBuffer = audioCtx.createBuffer(1, audioBuffer.length, audioBuffer.sampleRate);
+        const monoData = monoBuffer.getChannelData(0);
+        const leftChannel = audioBuffer.getChannelData(0);
+        const rightChannel = audioBuffer.getChannelData(1);
+        for (let i = 0; i < audioBuffer.length; i++) {
+            monoData[i] = (leftChannel[i] + rightChannel[i]) / 2;
+        }
+        audioBuffer = monoBuffer;
+    }
+
     const frames: number[][] = [];
     const onsets: number[][] = [];
     const contours: number[][] = [];
 
-    // 4. Run the Machine Learning model!
     await basicPitch.evaluateModel(
         audioBuffer,
         (f: number[][], o: number[][], c: number[][]) => {
-            frames.push(...f);
-            onsets.push(...o);
-            contours.push(...c);
+            frames.push(...f); onsets.push(...o); contours.push(...c);
         },
         (percent: number) => {
-            console.log(`Transcription progress: ${Math.round(percent * 100)}%`);
+            console.log(`Transcription: ${Math.round(percent * 100)}%`);
         }
     );
 
     console.log("Processing note events...");
-
-    // 5. Convert the raw ML matrix data into human-readable MIDI notes
     const midiNotes = noteFramesToTime(
         addPitchBendsToNoteEvents(
             contours,
-            // 0.25 and 0.25 are the activation/onset thresholds, 5 is min note length
-            outputToNotesPoly(frames, onsets, 0.25, 0.25, 5) 
+            outputToNotesPoly(frames, onsets, 0.25, 0.2, 11)
         )
     );
 
-    // 6. Convert Spotify's raw MIDI timing into our App's format (Beats)
-    const appNotes: Note[] = [];
-    
+    const rawNotes: Note[] = [];
+    const beatDuration = 60 / tempo;
+
     midiNotes.forEach((midiNote: any) => {
-        // Find our string pitch, ignore it if it's too high/low for our current synth
-        const pitchString = MIDI_TO_PITCH[Math.round(midiNote.pitchMidi)];
-        if (!pitchString) return;
+        const rawMidi = Math.round(midiNote.pitchMidi);
 
-        // Convert raw seconds into musical beats based on your app's tempo
-        const durationInSeconds = midiNote.durationSeconds;
-        let durationInBeats = durationInSeconds / (60 / tempo);
-        
-        // Round to nearest 16th note (0.25) to keep the visualizer clean
-        durationInBeats = Math.max(0.25, Math.round(durationInBeats * 4) / 4);
+        // Ignore ghost notes outside real piano range
+        if (rawMidi < 21 || rawMidi > 108) return;
 
-        appNotes.push({
+        // 🛡️ FIX: Defining these variables so TypeScript can find them!
+        const pitchString = midiToPitch(rawMidi);
+        const rawStartTime = midiNote.startTimeSeconds ?? midiNote.startSeconds ?? midiNote.startTime ?? 0;
+        const rawDuration = midiNote.durationSeconds ?? midiNote.duration ?? 0.5;
+        const rawAmplitude = midiNote.amplitude ?? 0.8;
+
+        // 🛡️ THE 8-BEAT PEDAL CUTTER: Respects whole notes!
+        const safeDuration = Math.min(8.0, rawDuration / beatDuration);
+
+        rawNotes.push({
             pitches: [pitchString],
-            duration: durationInBeats,
-            velocity: Math.round(midiNote.amplitude * 127) // 0-127 MIDI standard
+            duration: Math.max(0.125, safeDuration),
+            startTime: rawStartTime / beatDuration,
+            velocity: Math.round(rawAmplitude * 127)
         });
     });
 
-    console.log("Transcription complete!", appNotes);
-    return appNotes;
+    rawNotes.sort((a, b) => a.startTime - b.startTime);
+
+    // STEP 1: DE-STUTTER
+    const deStuttered: Note[] = [];
+    rawNotes.forEach(note => {
+        const pitch = note.pitches[0];
+        const lastSamePitch = deStuttered.slice().reverse().find(n => n.pitches[0] === pitch);
+
+        if (lastSamePitch && (note.startTime - (lastSamePitch.startTime + lastSamePitch.duration)) < 0.15) {
+            const newEnd = Math.max(lastSamePitch.startTime + lastSamePitch.duration, note.startTime + note.duration);
+            lastSamePitch.duration = Math.min(8.0, newEnd - lastSamePitch.startTime);
+        } else {
+            deStuttered.push({ ...note, pitches: [...note.pitches] });
+        }
+    });
+
+    // STEP 2: CHORD GROUPER
+    const finalChords: Note[] = [];
+    deStuttered.forEach(note => {
+        const existingChord = finalChords.find(c => Math.abs(c.startTime - note.startTime) < 0.1);
+
+        if (existingChord) {
+            if (!existingChord.pitches.includes(note.pitches[0])) {
+                existingChord.pitches.push(note.pitches[0]);
+                existingChord.duration = Math.max(existingChord.duration, note.duration);
+            }
+        } else {
+            finalChords.push(note);
+        }
+    });
+
+    // ... (Keep everything above Step 2: Chord Grouper the same)
+
+    // 🛡️ STEP 3: THE QUANTIZER
+    // Snaps notes to the nearest 1/12th of a beat (perfect for triplets!)
+    const quantizedNotes = finalChords.map(note => {
+        const snap = 1 / 12; // High enough resolution for triplets and 16th notes
+
+        return {
+            ...note,
+            // Round the start time to the nearest snap point
+            startTime: Math.round(note.startTime / snap) * snap,
+            // Round the duration so blocks look clean on the grid
+            duration: Math.max(snap, Math.round(note.duration / snap) * snap)
+        };
+    });
+
+    // 🛡️ STEP 4: THE HARMONIC FILTER
+    // If a "chord" has two notes of the same letter (octaves),
+    // and one is much quieter, we kill the "ghost" overtone.
+    quantizedNotes.forEach(note => {
+        if (note.pitches.length > 1) {
+            const baseNotes = note.pitches.map(p => p.replace(/\d/g, ''));
+            const uniqueBases = new Set(baseNotes);
+
+            if (uniqueBases.size < note.pitches.length) {
+                // We found an octave! Keep only the lowest one to clean up the sound.
+                const sortedPitches = [...note.pitches].sort((a, b) => {
+                    const octA = parseInt(a.replace(/\D/g, ''));
+                    const octB = parseInt(b.replace(/\D/g, ''));
+                    return octA - octB;
+                });
+                note.pitches = [sortedPitches[0]];
+            }
+        }
+    });
+
+    console.log(`Successfully Quantized ${quantizedNotes.length} notes!`, quantizedNotes);
+    return quantizedNotes;
 }
