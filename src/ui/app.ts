@@ -5,14 +5,12 @@ import { AudioRecorder } from '../audio/recorder';
 import { convertAudioToNotes } from '../audio/transcriber';
 import type { Project, Note } from '../types';
 
-// --- ENTERPRISE STATE MANAGEMENT ---
 const STORAGE_KEY = 'enterprise_daw_workspace';
 
 export function autoSaveProject(project: Project | null) {
     try {
         if (project) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
-            // Briefly show a "Saved" indicator in the UI
             const status = document.getElementById('save-status');
             if (status) {
                 status.style.display = 'block';
@@ -35,7 +33,6 @@ function loadSavedProject(): Project | null {
     }
 }
 
-// --- HELPER: WRAP DATA FOR TYPES ---
 const getMockProject = (tempo: number, instrument: number): Project => ({
     tempo: tempo,
     key: "C minor",
@@ -54,7 +51,6 @@ const getMockProject = (tempo: number, instrument: number): Project => ({
     }]
 });
 
-// --- INTERNAL BINARY EXPORTER ---
 function downloadMidiFile(project: Project, instrument: number) {
     if (!project || !project.tracks[0]) return;
     const TICKS_PER_BEAT = 128;
@@ -95,21 +91,44 @@ function downloadMidiFile(project: Project, instrument: number) {
 }
 
 /**
- * MAIN UI INITIALIZATION
+ * 📊 ENTERPRISE ANALYTICS: Updates the top dashboard stats
  */
+export function updateDashboardStats(project: Project) {
+    const statNotes = document.getElementById('stat-notes');
+    const statDuration = document.getElementById('stat-duration');
+
+    if (!statNotes || !statDuration) return;
+
+    let totalNotes = 0;
+    let lastNoteEnd = 0;
+
+    project.tracks.forEach(track => {
+        totalNotes += track.notes.length;
+        track.notes.forEach(note => {
+            const end = note.startTime + note.duration;
+            if (end > lastNoteEnd) lastNoteEnd = end;
+        });
+    });
+
+    const durationSeconds = (lastNoteEnd * 60) / project.tempo;
+    statNotes.textContent = totalNotes.toString();
+    statDuration.textContent = durationSeconds.toFixed(1) + "s";
+}
+
 export function setupUI(recorder: AudioRecorder) {
     const generateBtn = document.getElementById('generate-btn') as HTMLButtonElement;
+    const appendBtn = document.getElementById('append-btn') as HTMLButtonElement;
     const playBtn = document.getElementById('play-btn') as HTMLButtonElement;
     const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
     const exportBtn = document.getElementById('export-btn') as HTMLButtonElement;
     const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
     const promptInput = document.getElementById('prompt-input') as HTMLInputElement;
+    const lengthSelect = document.getElementById('length-select') as HTMLSelectElement;
     const tempoSlider = document.getElementById('tempo-slider') as HTMLInputElement;
     const tempoDisplay = document.getElementById('tempo-display') as HTMLSpanElement;
     const instrumentSelect = document.getElementById('instrument-select') as HTMLSelectElement;
     const recordingStatus = document.getElementById('recording-status') as HTMLElement;
 
-    // 🛡️ INITIAL LOAD: Restore session if it exists
     let currentMelody: Project | null = loadSavedProject();
     let isRecording = false;
 
@@ -117,7 +136,9 @@ export function setupUI(recorder: AudioRecorder) {
         tempoSlider.value = currentMelody.tempo.toString();
         tempoDisplay.textContent = currentMelody.tempo.toString();
         renderVisualizer(currentMelody, false);
+        updateDashboardStats(currentMelody);
         exportBtn.disabled = false;
+        appendBtn.disabled = false;
     }
 
     tempoSlider.oninput = () => {
@@ -125,7 +146,8 @@ export function setupUI(recorder: AudioRecorder) {
         if (currentMelody) {
             currentMelody.tempo = parseInt(tempoSlider.value);
             renderVisualizer(currentMelody, false);
-            autoSaveProject(currentMelody); // 🛡️ Save on tempo change
+            updateDashboardStats(currentMelody);
+            autoSaveProject(currentMelody);
         }
     };
 
@@ -142,50 +164,105 @@ export function setupUI(recorder: AudioRecorder) {
         currentMelody = null;
         renderVisualizer({ tempo: parseInt(tempoSlider.value), key: "C", tracks: [] }, false);
         exportBtn.disabled = true;
-        autoSaveProject(null); // 🛡️ Clear local storage
+        appendBtn.disabled = true;
+        autoSaveProject(null);
+
+        // Reset stats
+        const statNotes = document.getElementById('stat-notes');
+        const statDuration = document.getElementById('stat-duration');
+        if (statNotes) statNotes.textContent = "0";
+        if (statDuration) statDuration.textContent = "0s";
     };
 
     generateBtn.onclick = async () => {
         const userInput = promptInput.value;
         const tempo = parseInt(tempoSlider.value, 10);
         const inst = parseInt(instrumentSelect.value);
+        const length = lengthSelect.value;
 
+        // Toggle this if you are out of API tokens!
         const useMockData = true;
 
-        if (useMockData) {
-            console.log(`Mocking melody for prompt: "${userInput}"`);
-            currentMelody = getMockProject(tempo, inst);
-        } else {
-            generateBtn.disabled = true;
-            generateBtn.textContent = "AI is composing...";
-            try {
-                const aiNotes = await generateMelody(userInput, tempo, "8 bars");
-                currentMelody = {
-                    tempo,
-                    key: "C",
-                    tracks: [{
-                        id: "ai-track",
-                        name: "AI Generation",
-                        instrument: inst,
-                        notes: aiNotes,
-                        volume: 1,
-                        isMuted: false
-                    }]
-                };
-            } catch (e) {
-                console.error("AI Error:", e);
-                alert("The AI had stage fright. Try again.");
+        generateBtn.disabled = true;
+        generateBtn.textContent = "⏳...";
+
+        try {
+            let newNotes: Note[];
+            if (useMockData) {
+                newNotes = getMockProject(tempo, inst).tracks[0].notes;
+            } else {
+                newNotes = await generateMelody(userInput, tempo, length);
             }
-            generateBtn.disabled = false;
-            generateBtn.textContent = "✨ Generate AI";
+
+            currentMelody = {
+                tempo,
+                key: "C",
+                tracks: [{
+                    id: "ai-track",
+                    name: "AI Composition",
+                    instrument: inst,
+                    notes: newNotes,
+                    volume: 1,
+                    isMuted: false
+                }]
+            };
+
+            renderVisualizer(currentMelody, false);
+            updateDashboardStats(currentMelody);
+            autoSaveProject(currentMelody);
+
+            exportBtn.disabled = false;
+            appendBtn.disabled = false;
+        } catch (e) {
+            console.error("AI Error:", e);
+            alert("The AI had stage fright. Try again.");
         }
 
-        if (currentMelody) {
+        generateBtn.disabled = false;
+        generateBtn.textContent = "✨ New";
+    };
+
+    // 🛡️ THE ARRANGER: Stitching songs together
+    appendBtn.onclick = async () => {
+        if (!currentMelody || currentMelody.tracks.length === 0) return;
+
+        const userInput = promptInput.value;
+        const tempo = parseInt(tempoSlider.value, 10);
+        const length = lengthSelect.value;
+
+        appendBtn.disabled = true;
+        appendBtn.textContent = "⏳...";
+
+        try {
+            // 1. Calculate the exact ending beat of the current composition
+            let songEndBeat = 0;
+            currentMelody.tracks[0].notes.forEach(n => {
+                songEndBeat = Math.max(songEndBeat, n.startTime + n.duration);
+            });
+
+            // 2. Fetch the next segment from the AI
+            const nextSegmentNotes = await generateMelody(userInput, tempo, length);
+
+            // 3. Mathematical Time-Shift: Push all new notes to the end of the timeline
+            nextSegmentNotes.forEach(n => {
+                n.startTime += songEndBeat;
+            });
+
+            // 4. Inject into the master track
+            currentMelody.tracks[0].notes.push(...nextSegmentNotes);
+
+            // 5. Save and Render the new, longer timeline
             renderVisualizer(currentMelody, false);
-            await playMelody(currentMelody, inst);
-            exportBtn.disabled = false;
-            autoSaveProject(currentMelody); // 🛡️ Save successful generation
+            updateDashboardStats(currentMelody);
+            autoSaveProject(currentMelody);
+
+        } catch (e) {
+            console.error("AI Append Error:", e);
+            alert("Failed to append the next section. Check your API connection.");
         }
+
+        appendBtn.disabled = false;
+        appendBtn.textContent = "➕ Append";
     };
 
     recordBtn.onclick = async () => {
@@ -213,8 +290,10 @@ export function setupUI(recorder: AudioRecorder) {
                 };
                 if (currentMelody) {
                     renderVisualizer(currentMelody, false);
+                    updateDashboardStats(currentMelody);
+                    autoSaveProject(currentMelody);
                     exportBtn.disabled = false;
-                    autoSaveProject(currentMelody); // 🛡️ Save successful recording
+                    appendBtn.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
