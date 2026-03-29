@@ -105,6 +105,7 @@ h1 {
 }
 
 /* --- UI CONTROLS --- */
+/* --- src/style.css --- */
 #prompt-input {
     padding: 12px 20px;
     font-size: 16px;
@@ -112,8 +113,10 @@ h1 {
     border: 1px solid #444;
     background-color: #2a2a35;
     color: white;
-    width: 300px;
-    margin: 20px 0 20px;
+    /* 🛡️ DELETED width: 300px; */
+    /* 🛡️ DELETED margin: 20px 0 20px; */
+    width: 100%; /* Add this instead to fill its container */
+    box-sizing: border-box; /* Ensures padding doesn't cause overlap */
 }
 
 #generate-btn, #export-btn, #record-btn {

@@ -21,19 +21,19 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
 
     if (!canvas || !viewport || !playhead) return;
 
-    // 1. Kill any existing animation
+    // 1. Reset any running animations
     if (currentAnimId) {
         cancelAnimationFrame(currentAnimId);
         currentAnimId = null;
     }
 
-    // 2. Wipe the canvas completely clean
+    // 2. Clear the canvas
     canvas.innerHTML = '';
 
     const pixelsPerBeat = 100;
     let maxProjectWidth = viewport.clientWidth;
 
-    // 3. Draw the Lanes and Notes (Your exact original logic)
+    // 3. Render Lanes and Notes
     project.tracks.forEach((track: Track, index: number) => {
         const lane = document.createElement('div');
         lane.className = 'track-lane';
@@ -44,6 +44,32 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
         lane.style.backgroundColor = index % 2 === 0 ? '#121217' : '#1a1a24';
 
         lane.innerHTML = `<div style="position: sticky; left: 0; background: #646cff; color: white; padding: 4px 10px; font-weight: bold; width: fit-content; z-index: 10;">Track ${index + 1}: ${track.name}</div>`;
+
+        // 🛡️ THE DEMO-SAVER: Double-click to add a note manually
+        lane.ondblclick = (e) => {
+            const rect = lane.getBoundingClientRect();
+            const clickX = e.clientX - rect.left + viewport.scrollLeft;
+            const clickY = e.clientY - rect.top;
+
+            const snappedStart = Math.floor(clickX / pixelsPerBeat);
+            const snappedTop = Math.round(clickY / 20) * 20;
+            const pitch = PIXEL_TO_NOTE[snappedTop];
+
+            if (pitch) {
+                // Read the selected note size from the UI (defaults to 1 if not found)
+                const sizeSelect = document.getElementById('draw-size') as HTMLSelectElement;
+                const noteDuration = sizeSelect ? parseFloat(sizeSelect.value) : 1;
+
+                track.notes.push({
+                    pitches: [pitch],
+                    duration: noteDuration, // Uses the dropdown value!
+                    startTime: snappedStart,
+                    velocity: 100
+                });
+                renderVisualizer(project, false);
+                localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
+            }
+        };
 
         track.notes.forEach((note: Note, nIdx: number) => {
             const width = (note.duration * pixelsPerBeat) - 4;
@@ -59,6 +85,19 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
                 block.style.height = '16px';
                 block.style.position = 'absolute';
 
+                // 🛡️ THE ERASER: Right-click to delete a note
+                block.oncontextmenu = (e) => {
+                    e.preventDefault(); // Stops the browser's default right-click menu
+
+                    // Remove this specific note from the track array
+                    track.notes.splice(nIdx, 1);
+
+                    // Refresh the UI and auto-save the deletion
+                    renderVisualizer(project, false);
+                    localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
+                };
+
+                // Manual Dragging Logic
                 block.onmousedown = (e) => {
                     const startX = e.clientX;
                     const startY = e.clientY;
@@ -71,10 +110,8 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
                         nt = Math.max(20, Math.min(380, nt));
                         let nl = originalLeft + (me.clientX - startX);
                         nl = Math.round(nl / 25) * 25;
-
                         block.style.top = `${nt}px`;
                         block.style.left = `${nl}px`;
-
                         const p = PIXEL_TO_NOTE[nt];
                         if (p && nt !== originalTop) playNotePreview(p, inst);
                     };
@@ -86,8 +123,6 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
                         if (finalPitch) {
                             track.notes[nIdx].pitches[pIdx] = finalPitch;
                             track.notes[nIdx].startTime = finalLeft / pixelsPerBeat;
-
-                            // 🛡️ ENTERPRISE: Auto-save manual edits!
                             localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
                         }
                         document.removeEventListener('mousemove', move);
@@ -104,51 +139,37 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
 
     canvas.style.width = `${maxProjectWidth}px`;
 
-    // 🛡️ THE LAYER FIX: Move the playhead to the very end of the viewport
-    // This physically guarantees it renders ON TOP of everything else.
+    // 4. Playhead Positioning
     viewport.appendChild(playhead);
-
     playhead.style.display = project.tracks.length > 0 ? 'block' : 'none';
     playhead.style.zIndex = '9999';
-    playhead.style.animation = 'none'; // Overrides the broken CSS animations
+    playhead.style.animation = 'none';
 
-    // 4. 🛡️ THE BULLETPROOF ANIMATION LOOP
+    // 5. Animation Loop
     if (isPlaying && project.tracks.length > 0) {
         const durationSecs = (maxProjectWidth / pixelsPerBeat * 60) / project.tempo;
-
-        // We MUST start this as null so we can grab the exact browser timestamp on the very first frame
         let startTimestamp: number | null = null;
 
         const sync = (timestamp: number) => {
-            // Initialize the clock using the engine's internal timer
             if (!startTimestamp) startTimestamp = timestamp;
-
             const elapsed = (timestamp - startTimestamp) / 1000;
             const progress = Math.min(elapsed / durationSecs, 1);
-
-            // Mathematically calculate the exact pixel distance
             const x = progress * maxProjectWidth;
 
-            // Move the playhead directly
             playhead.style.transform = `translateX(${x}px)`;
-
-            // Lock the camera to the playhead
             viewport.scrollLeft = Math.max(0, x - (viewport.clientWidth / 2));
 
-            // Loop until finished
             if (progress < 1) {
                 currentAnimId = requestAnimationFrame(sync);
             }
         };
-
         currentAnimId = requestAnimationFrame(sync);
     } else {
-        // Reset the playhead to start
         playhead.style.transform = `translateX(0px)`;
         viewport.scrollLeft = 0;
     }
 
-    // 🛡️ ENTERPRISE: Update Dashboard Analytics
+    // 6. 🛡️ DASHBOARD ANALYTICS: Update the top bar numbers
     const statNotes = document.getElementById('stat-notes');
     const statDuration = document.getElementById('stat-duration');
     if (statNotes && statDuration) {
@@ -162,5 +183,4 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
         statNotes.textContent = totalNotes.toString();
         statDuration.textContent = durationSecs.toFixed(1) + "s";
     }
-} // <-- This is the closing brace of renderVisualizer
-
+}

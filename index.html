@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise AI Composer</title>
-    <link rel="stylesheet" href="/src/style.css">
+    <link rel="stylesheet" href="./src/style.css">
 </head>
 <body style="margin: 0; padding: 0; overflow: hidden; background-color: #121217;">
 
@@ -42,25 +42,49 @@
             </div>
         </header>
 
-        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 15px; align-items: center; border-bottom: 1px solid #333;">
-            <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression in C minor" style="flex: 1; max-width: 400px; margin: 0;" />
+        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 20px; align-items: flex-end; border-bottom: 1px solid #333; flex-wrap: nowrap;">
 
-            <select id="length-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
-                <option value="4 bars">4 Bars</option>
-                <option value="8 bars" selected>8 Bars</option>
-            </select>
-
-            <select id="instrument-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
-                <option value="1" selected>Acoustic Piano</option>
-                <option value="40">Synth Bass</option>
-            </select>
-
-            <div style="display: flex; align-items: center; gap: 10px; background: #2a2a35; padding: 5px 15px; border-radius: 4px; border: 1px solid #444;">
-                <label for="tempo-slider" style="font-size: 0.9rem;">BPM: <span id="tempo-display">120</span></label>
-                <input type="range" id="tempo-slider" min="60" max="200" value="120" style="width: 80px;" />
+            <div style="display:flex; flex-direction:column; flex: 1; min-width: 200px;">
+                <label for="prompt-input" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">AI Composition Prompt</label>
+                <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression..." />
             </div>
 
-            <button id="generate-btn">✨ Generate AI</button>
+            <div style="display:flex; flex-direction:column; width: 110px; flex-shrink: 0;">
+                <label for="draw-size" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Draw Size</label>
+                <select id="draw-size" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+                    <option value="0.25">16th Note</option>
+                    <option value="0.5">8th Note</option>
+                    <option value="1" selected>Quarter</option>
+                    <option value="2">Half Note</option>
+                    <option value="4">Whole Note</option>
+                </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; width: 100px; flex-shrink: 0;">
+                <label for="length-select" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Length</label>
+                <select id="length-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+                    <option value="4 bars">4 Bars</option>
+                    <option value="8 bars" selected>8 Bars</option>
+                    <option value="16 bars">16 Bars</option>
+                </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
+                <label for="instrument-select" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Instrument</label>
+                <select id="instrument-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+                    <option value="1" selected>Acoustic Piano</option>
+                    <option value="40">Synth Bass</option>
+                </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
+                <label for="tempo-slider" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">BPM: <span id="tempo-display">120</span></label>
+                <div style="background: #2a2a35; padding: 8px 10px; border-radius: 4px; border: 1px solid #444; display: flex; align-items: center;">
+                    <input type="range" id="tempo-slider" min="60" max="200" value="120" style="width: 100%;" />
+                </div>
+            </div>
+
+            <button id="generate-btn" style="height: 42px; padding: 0 20px; flex-shrink: 0;">✨ Generate AI</button>
         </div>
 
         <div style="flex: 1; padding: 25px; overflow: hidden; display: flex; flex-direction: column;">
@@ -73,6 +97,6 @@
     </main>
 </div>
 
-<script type="module" src="/src/main.ts"></script>
+<script type="module" src="./src/main.ts"></script>
 </body>
 </html>
