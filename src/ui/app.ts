@@ -6,7 +6,9 @@ import { convertAudioToNotes } from '../audio/transcriber';
 import type { Project, Note } from '../types';
 
 const STORAGE_KEY = 'enterprise_daw_workspace';
+const HISTORY_KEY = 'enterprise_daw_history'; // 🛡️ NEW: Storage for the history cabinet
 
+// --- ENTERPRISE STATE MANAGEMENT ---
 export function autoSaveProject(project: Project | null) {
     try {
         if (project) {
@@ -31,6 +33,20 @@ function loadSavedProject(): Project | null {
     } catch (e) {
         return null;
     }
+}
+
+// 🛡️ NEW: Load and Save History Arrays
+function loadHistory(): Project[] {
+    try {
+        const data = localStorage.getItem(HISTORY_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch { return []; }
+}
+
+function saveHistory(historyArray: Project[]) {
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(historyArray));
+    } catch (e) { console.error("History storage failed", e); }
 }
 
 const getMockProject = (tempo: number, instrument: number): Project => ({
@@ -90,13 +106,9 @@ function downloadMidiFile(project: Project, instrument: number) {
     a.click();
 }
 
-/**
- * 📊 ENTERPRISE ANALYTICS: Updates the top dashboard stats
- */
 export function updateDashboardStats(project: Project) {
     const statNotes = document.getElementById('stat-notes');
     const statDuration = document.getElementById('stat-duration');
-
     if (!statNotes || !statDuration) return;
 
     let totalNotes = 0;
@@ -130,8 +142,73 @@ export function setupUI(recorder: AudioRecorder) {
     const recordingStatus = document.getElementById('recording-status') as HTMLElement;
 
     let currentMelody: Project | null = loadSavedProject();
+    let projectHistory: Project[] = loadHistory(); // 🛡️ Load the history cabinet
     let isRecording = false;
 
+    // 🛡️ NEW: Function to render the history list in the sidebar
+    const renderHistoryList = () => {
+        const list = document.getElementById('history-list');
+        if (!list) return;
+        list.innerHTML = '';
+
+        projectHistory.forEach((proj, index) => {
+            const li = document.createElement('li');
+            li.style.padding = '10px 15px';
+            li.style.background = '#2a2a35';
+            li.style.borderRadius = '6px';
+            li.style.cursor = 'pointer';
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.border = '1px solid #444';
+            li.style.transition = 'all 0.2s ease';
+
+            // Calculate how many notes are in this old take
+            let totalNotes = 0;
+            proj.tracks.forEach(t => totalNotes += t.notes.length);
+
+            li.innerHTML = `
+                <strong style="color: white; font-size: 0.9rem;">Take ${index + 1}</strong>
+                <span style="color: #888; font-size: 0.8rem;">${totalNotes} notes</span>
+            `;
+
+            li.onmouseover = () => { li.style.borderColor = '#646cff'; li.style.transform = 'translateX(2px)'; };
+            li.onmouseout = () => { li.style.borderColor = '#444'; li.style.transform = 'translateX(0)'; };
+
+            // When a user clicks an old take, restore it!
+            li.onclick = () => {
+                // We use JSON parse/stringify to create a clean, unlinked copy
+                currentMelody = JSON.parse(JSON.stringify(proj));
+                tempoSlider.value = currentMelody!.tempo.toString();
+                tempoDisplay.textContent = currentMelody!.tempo.toString();
+
+                renderVisualizer(currentMelody!, false);
+                updateDashboardStats(currentMelody!);
+                autoSaveProject(currentMelody);
+
+                exportBtn.disabled = false;
+                appendBtn.disabled = false;
+            };
+
+            list.appendChild(li);
+        });
+    };
+
+    // 🛡️ NEW: Function to snapshot the current workspace BEFORE overwriting it
+    const snapshotCurrentToHistory = () => {
+        if (!currentMelody || currentMelody.tracks.length === 0 || currentMelody.tracks[0].notes.length === 0) return;
+
+        // Deep copy the current state and push it to history
+        projectHistory.push(JSON.parse(JSON.stringify(currentMelody)));
+
+        // Limit history to 10 items so we don't crash the browser storage
+        if (projectHistory.length > 10) projectHistory.shift();
+
+        saveHistory(projectHistory);
+        renderHistoryList();
+    };
+
+    // Initialization
     if (currentMelody) {
         tempoSlider.value = currentMelody.tempo.toString();
         tempoDisplay.textContent = currentMelody.tempo.toString();
@@ -140,7 +217,9 @@ export function setupUI(recorder: AudioRecorder) {
         exportBtn.disabled = false;
         appendBtn.disabled = false;
     }
+    renderHistoryList(); // Draw the list on startup
 
+    // Controls
     tempoSlider.oninput = () => {
         if (tempoDisplay) tempoDisplay.textContent = tempoSlider.value;
         if (currentMelody) {
@@ -161,13 +240,14 @@ export function setupUI(recorder: AudioRecorder) {
     };
 
     clearBtn.onclick = () => {
+        snapshotCurrentToHistory(); // 🛡️ Save their work before wiping the desk!
+
         currentMelody = null;
         renderVisualizer({ tempo: parseInt(tempoSlider.value), key: "C", tracks: [] }, false);
         exportBtn.disabled = true;
         appendBtn.disabled = true;
         autoSaveProject(null);
 
-        // Reset stats
         const statNotes = document.getElementById('stat-notes');
         const statDuration = document.getElementById('stat-duration');
         if (statNotes) statNotes.textContent = "0";
@@ -179,9 +259,10 @@ export function setupUI(recorder: AudioRecorder) {
         const tempo = parseInt(tempoSlider.value, 10);
         const inst = parseInt(instrumentSelect.value);
         const length = lengthSelect.value;
+        const useMockData = false;
 
-        // Toggle this if you are out of API tokens!
-        const useMockData = true;
+        // 🛡️ File the current project away into the cabinet before we overwrite it
+        snapshotCurrentToHistory();
 
         generateBtn.disabled = true;
         generateBtn.textContent = "⏳...";
@@ -222,36 +303,28 @@ export function setupUI(recorder: AudioRecorder) {
         generateBtn.textContent = "✨ New";
     };
 
-    // 🛡️ THE ARRANGER: Stitching songs together
     appendBtn.onclick = async () => {
         if (!currentMelody || currentMelody.tracks.length === 0) return;
-
         const userInput = promptInput.value;
         const tempo = parseInt(tempoSlider.value, 10);
         const length = lengthSelect.value;
+
+        // 🛡️ Snapshot before appending in case the AI messes up the song
+        snapshotCurrentToHistory();
 
         appendBtn.disabled = true;
         appendBtn.textContent = "⏳...";
 
         try {
-            // 1. Calculate the exact ending beat of the current composition
             let songEndBeat = 0;
             currentMelody.tracks[0].notes.forEach(n => {
                 songEndBeat = Math.max(songEndBeat, n.startTime + n.duration);
             });
 
-            // 2. Fetch the next segment from the AI
             const nextSegmentNotes = await generateMelody(userInput, tempo, length);
-
-            // 3. Mathematical Time-Shift: Push all new notes to the end of the timeline
-            nextSegmentNotes.forEach(n => {
-                n.startTime += songEndBeat;
-            });
-
-            // 4. Inject into the master track
+            nextSegmentNotes.forEach(n => n.startTime += songEndBeat);
             currentMelody.tracks[0].notes.push(...nextSegmentNotes);
 
-            // 5. Save and Render the new, longer timeline
             renderVisualizer(currentMelody, false);
             updateDashboardStats(currentMelody);
             autoSaveProject(currentMelody);
@@ -273,6 +346,9 @@ export function setupUI(recorder: AudioRecorder) {
 
             const audioUrl = await recorder.stop();
             const tempo = parseInt(tempoSlider.value);
+
+            // 🛡️ Snapshot before replacing with the piano recording
+            snapshotCurrentToHistory();
 
             try {
                 const extractedNotes = await convertAudioToNotes(audioUrl, tempo);
@@ -313,8 +389,6 @@ export function setupUI(recorder: AudioRecorder) {
     };
 
     exportBtn.onclick = () => {
-        if (currentMelody) {
-            downloadMidiFile(currentMelody, parseInt(instrumentSelect.value));
-        }
+        if (currentMelody) downloadMidiFile(currentMelody, parseInt(instrumentSelect.value));
     };
 }

@@ -15,25 +15,30 @@
             <h2 style="margin: 0; color: #646cff; font-size: 1.2rem;">AI Composer Pro</h2>
         </div>
 
-        <div style="padding: 20px; flex: 1;">
+        <div style="padding: 20px; flex: 1; display: flex; flex-direction: column;">
             <h3 style="margin-top: 0; font-size: 0.9rem; color: #888; text-transform: uppercase;">Audio Input</h3>
             <button id="record-btn" style="width: 100%; margin-bottom: 10px;">🎤 Record Real Piano</button>
             <div style="text-align: center; height: 20px;">
                 <span id="recording-status" style="display:none; color: #ff4757; font-weight: bold; font-size: 0.9rem;">🔴 Recording...</span>
             </div>
 
-            <h3 style="margin-top: 20px; font-size: 0.9rem; color: #888; text-transform: uppercase;">Session</h3>
-            <div id="save-status" style="color: #00b894; font-size: 0.8rem; display: none;">✓ Auto-saved to Workspace</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px;">
+                <h3 style="margin: 0; font-size: 0.9rem; color: #888; text-transform: uppercase;">Version History</h3>
+                <span id="save-status" style="color: #00b894; font-size: 0.75rem; display: none;">✓ Saved</span>
+            </div>
+
+            <ul id="history-list" style="list-style: none; padding: 0; margin: 15px 0 0 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
+            </ul>
         </div>
     </aside>
 
-    <main style="flex: 1; display: flex; flex-direction: column; background-color: #1e1e24;">
+    <main style="flex: 1; display: flex; flex-direction: column; background-color: #1e1e24; height: 100%;">
 
-        <header style="padding: 15px 25px; background: #1a1a24; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+        <header style="padding: 15px 25px; background: #1a1a24; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <div style="display: flex; gap: 15px; align-items: center;">
-                <button id="play-btn">▶ Play</button>
-                <button id="clear-btn">🗑 Clear</button>
-                <button id="export-btn" disabled>⬇ Download MIDI</button>
+                <button id="play-btn" style="height: 36px; padding: 0 15px; background: #00b894; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">▶ Play</button>
+                <button id="clear-btn" style="height: 36px; padding: 0 15px; background: #4b4b5e; border: none; color: white; border-radius: 4px; cursor: pointer;">🗑 Clear</button>
+                <button id="export-btn" style="height: 36px; padding: 0 15px; background: #646cff; border: none; color: white; border-radius: 4px; cursor: pointer;" disabled>⬇ MIDI</button>
             </div>
 
             <div style="font-size: 0.9rem; color: #aaa; display: flex; gap: 20px;">
@@ -42,21 +47,20 @@
             </div>
         </header>
 
-        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 20px; align-items: flex-end; border-bottom: 1px solid #333; flex-wrap: nowrap;">
+        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 15px; align-items: flex-end; border-bottom: 1px solid #333; flex-wrap: nowrap; flex-shrink: 0;">
 
             <div style="display:flex; flex-direction:column; flex: 1; min-width: 200px;">
                 <label for="prompt-input" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">AI Composition Prompt</label>
-                <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression..." />
+                <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression..." style="padding: 10px; border-radius: 4px; border: 1px solid #444; background: #2a2a35; color: white;" />
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 110px; flex-shrink: 0;">
-                <label for="draw-size" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Draw Size</label>
-                <select id="draw-size" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
-                    <option value="0.25">16th Note</option>
-                    <option value="0.5">8th Note</option>
-                    <option value="1" selected>Quarter</option>
-                    <option value="2">Half Note</option>
-                    <option value="4">Whole Note</option>
+            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
+                <label for="draw-tool" style="font-size: 0.8rem; color: #00b894; margin-bottom: 6px; font-weight: bold;">✏️ Draw Tool</label>
+                <select id="draw-tool" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #00b894; cursor: pointer;">
+                    <option value="single">Single Note</option>
+                    <option value="major">Major Triad</option>
+                    <option value="minor">Minor Triad</option>
+                    <option value="octave">Octave</option>
                 </select>
             </div>
 
@@ -84,16 +88,24 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; flex-shrink: 0; align-items: flex-end;">
+            <div style="display: flex; gap: 10px; flex-shrink: 0;">
                 <button id="generate-btn" style="height: 42px; padding: 0 15px; background: #646cff; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">✨ New</button>
                 <button id="append-btn" style="height: 42px; padding: 0 15px; background: #00b894; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;" disabled>➕ Append</button>
             </div>
         </div>
 
         <div style="flex: 1; padding: 25px; overflow: hidden; display: flex; flex-direction: column;">
-            <div id="visualizer-viewport" style="flex: 1; width: 100%; max-width: 100%; margin: 0;">
-                <div id="playhead"></div>
-                <div id="visualizer-canvas"></div>
+
+            <div style="display: flex; flex: 1; border: 2px solid #333; border-radius: 8px; overflow: hidden; background: #121217; position: relative;">
+
+                <div id="piano-keyboard" style="width: 60px; background: #1a1a24; border-right: 2px solid #000; z-index: 50; position: relative; overflow-y: hidden; flex-shrink: 0;">
+                </div>
+
+                <div id="visualizer-viewport" style="flex: 1; position: relative; overflow-x: auto; overflow-y: hidden;">
+                    <div id="playhead"></div>
+                    <div id="visualizer-canvas"></div>
+                </div>
+
             </div>
         </div>
 

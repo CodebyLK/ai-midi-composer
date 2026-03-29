@@ -1,11 +1,19 @@
 import type { Project, Track, Note } from '../types';
 import { playNotePreview } from '../audio/synth';
 
+// 🛡️ Note Map ordered by Pitch Height
+// 🛡️ FIXED: Restored the missing D#5 and aligned the 20px grid perfectly
 const NOTE_MAP: Record<string, number> = {
-    "G5": 20, "F#5": 40, "F5": 60, "E5": 80, "D5": 100, "C#5": 120, "C5": 140,
+    "G5": 0, "F#5": 20, "F5": 40, "E5": 60, "D#5": 80, "D5": 100, "C#5": 120, "C5": 140,
     "B4": 160, "A#4": 180, "A4": 200, "G#4": 220, "G4": 240, "F#4": 260,
     "F4": 280, "E4": 300, "D#4": 320, "D4": 340, "C#4": 360, "C4": 380
 };
+
+// 🛡️ Ordered array of notes to calculate chords
+const ORDERED_NOTES = [
+    "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4",
+    "C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5"
+];
 
 const PIXEL_TO_NOTE: Record<number, string> = Object.fromEntries(
     Object.entries(NOTE_MAP).map(([note, pos]) => [pos, note])
@@ -13,39 +21,112 @@ const PIXEL_TO_NOTE: Record<number, string> = Object.fromEntries(
 
 let currentAnimId: number | null = null;
 
+/**
+ * 🎵 THEORY ENGINE: Calculates chord intervals
+ */
+function buildChord(rootPitch: string, type: string): string[] {
+    const rootIndex = ORDERED_NOTES.indexOf(rootPitch);
+    if (rootIndex === -1) return [rootPitch];
+
+    const chord = [rootPitch];
+
+    if (type === 'major') {
+        if (ORDERED_NOTES[rootIndex + 4]) chord.push(ORDERED_NOTES[rootIndex + 4]); // Major 3rd
+        if (ORDERED_NOTES[rootIndex + 7]) chord.push(ORDERED_NOTES[rootIndex + 7]); // Perfect 5th
+    } else if (type === 'minor') {
+        if (ORDERED_NOTES[rootIndex + 3]) chord.push(ORDERED_NOTES[rootIndex + 3]); // Minor 3rd
+        if (ORDERED_NOTES[rootIndex + 7]) chord.push(ORDERED_NOTES[rootIndex + 7]); // Perfect 5th
+    } else if (type === 'octave') {
+        if (ORDERED_NOTES[rootIndex + 12]) chord.push(ORDERED_NOTES[rootIndex + 12]); // Octave
+    }
+
+    return chord;
+}
+
 export function renderVisualizer(project: Project, isPlaying: boolean = false) {
     const canvas = document.getElementById('visualizer-canvas');
     const viewport = document.getElementById('visualizer-viewport');
     const playhead = document.getElementById('playhead');
+    const keyboardPanel = document.getElementById('piano-keyboard');
     const instSelect = document.getElementById('instrument-select') as HTMLSelectElement;
 
     if (!canvas || !viewport || !playhead) return;
 
-    // 1. Reset any running animations
     if (currentAnimId) {
         cancelAnimationFrame(currentAnimId);
         currentAnimId = null;
     }
 
-    // 2. Clear the canvas
     canvas.innerHTML = '';
+
+    // 🛡️ ENTERPRISE: Draw the Piano Keyboard
+    // 🛡️ ENTERPRISE: Draw the Piano Keyboard
+    if (keyboardPanel) {
+        keyboardPanel.innerHTML = '';
+        // Give the panel a white background so white keys look connected
+        keyboardPanel.style.backgroundColor = '#fefefe';
+
+        Object.entries(NOTE_MAP).forEach(([noteName, topPos]) => {
+            const isBlackKey = noteName.includes('#');
+            const key = document.createElement('div');
+
+            key.style.position = 'absolute';
+            key.style.top = `${topPos}px`;
+            key.style.width = isBlackKey ? '35px' : '100%';
+            // Stretch the white keys slightly so they overlap perfectly
+            key.style.height = isBlackKey ? '20px' : '21px';
+
+            key.style.backgroundColor = isBlackKey ? '#222' : '#fefefe';
+            key.style.borderBottom = '1px solid #ccc';
+            key.style.borderRight = isBlackKey ? '2px solid #111' : 'none';
+            key.style.borderBottomRightRadius = isBlackKey ? '3px' : '0px';
+            key.style.zIndex = isBlackKey ? '2' : '1';
+
+            key.style.color = isBlackKey ? '#888' : '#555';
+            key.style.fontSize = '10px';
+            key.style.fontWeight = 'bold';
+            key.style.display = 'flex';
+            key.style.alignItems = 'center';
+            key.style.justifyContent = 'flex-end';
+            key.style.paddingRight = '5px';
+            key.style.boxSizing = 'border-box';
+            key.style.cursor = 'pointer';
+
+            // Only label the C notes to keep it looking clean and professional
+            if (noteName.startsWith('C') && !noteName.includes('#')) {
+                key.textContent = noteName;
+            }
+
+            // Click the key to hear the note
+            key.onmousedown = () => playNotePreview(noteName, parseInt(instSelect?.value || "1"));
+
+            keyboardPanel.appendChild(key);
+        });
+    }
 
     const pixelsPerBeat = 100;
     let maxProjectWidth = viewport.clientWidth;
 
-    // 3. Render Lanes and Notes
-    project.tracks.forEach((track: Track, index: number) => {
+    project.tracks.forEach((track: Track) => {
         const lane = document.createElement('div');
         lane.className = 'track-lane';
         lane.style.position = 'relative';
-        lane.style.height = '400px';
+        lane.style.height = '420px'; // Fit all notes
         lane.style.width = '100%';
-        lane.style.borderBottom = '4px solid #333';
-        lane.style.backgroundColor = index % 2 === 0 ? '#121217' : '#1a1a24';
+        lane.style.backgroundColor = '#121217';
 
-        lane.innerHTML = `<div style="position: sticky; left: 0; background: #646cff; color: white; padding: 4px 10px; font-weight: bold; width: fit-content; z-index: 10;">Track ${index + 1}: ${track.name}</div>`;
+        // Horizontal Grid Lines to match the keys
+        Object.values(NOTE_MAP).forEach(topPos => {
+            const line = document.createElement('div');
+            line.style.position = 'absolute';
+            line.style.top = `${topPos + 20}px`;
+            line.style.width = '100%';
+            line.style.borderBottom = '1px solid #222';
+            line.style.pointerEvents = 'none'; // So clicks pass through to the lane
+            lane.appendChild(line);
+        });
 
-        // 🛡️ THE DEMO-SAVER: Double-click to add a note manually
+        // 🛡️ THE CHORD STAMPER: Use Music Theory on Double Click
         lane.ondblclick = (e) => {
             const rect = lane.getBoundingClientRect();
             const clickX = e.clientX - rect.left + viewport.scrollLeft;
@@ -53,19 +134,22 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
 
             const snappedStart = Math.floor(clickX / pixelsPerBeat);
             const snappedTop = Math.round(clickY / 20) * 20;
-            const pitch = PIXEL_TO_NOTE[snappedTop];
+            const rootPitch = PIXEL_TO_NOTE[snappedTop];
 
-            if (pitch) {
-                // Read the selected note size from the UI (defaults to 1 if not found)
-                const sizeSelect = document.getElementById('draw-size') as HTMLSelectElement;
-                const noteDuration = sizeSelect ? parseFloat(sizeSelect.value) : 1;
+            if (rootPitch) {
+                const toolSelect = document.getElementById('draw-tool') as HTMLSelectElement;
+                const toolType = toolSelect ? toolSelect.value : 'single';
+
+                // Magic happens here!
+                const pitchesToDraw = buildChord(rootPitch, toolType);
 
                 track.notes.push({
-                    pitches: [pitch],
-                    duration: noteDuration, // Uses the dropdown value!
+                    pitches: pitchesToDraw,
+                    duration: 1,
                     startTime: snappedStart,
                     velocity: 100
                 });
+
                 renderVisualizer(project, false);
                 localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
             }
@@ -82,23 +166,19 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
                 block.style.left = `${left}px`;
                 block.style.top = `${NOTE_MAP[pitch] || 150}px`;
                 block.style.width = `${width}px`;
-                block.style.height = '16px';
+                block.style.height = '18px';
                 block.style.position = 'absolute';
+                block.style.borderRadius = '3px';
 
-                // 🛡️ THE ERASER: Right-click to delete a note
                 block.oncontextmenu = (e) => {
-                    e.preventDefault(); // Stops the browser's default right-click menu
-
-                    // Remove this specific note from the track array
+                    e.preventDefault();
                     track.notes.splice(nIdx, 1);
-
-                    // Refresh the UI and auto-save the deletion
                     renderVisualizer(project, false);
                     localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
                 };
 
-                // Manual Dragging Logic
                 block.onmousedown = (e) => {
+                    if (e.button === 2) return; // Ignore right-clicks for dragging
                     const startX = e.clientX;
                     const startY = e.clientY;
                     const originalTop = parseInt(block.style.top);
@@ -139,13 +219,12 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
 
     canvas.style.width = `${maxProjectWidth}px`;
 
-    // 4. Playhead Positioning
     viewport.appendChild(playhead);
     playhead.style.display = project.tracks.length > 0 ? 'block' : 'none';
     playhead.style.zIndex = '9999';
     playhead.style.animation = 'none';
+    playhead.style.height = '420px';
 
-    // 5. Animation Loop
     if (isPlaying && project.tracks.length > 0) {
         const durationSecs = (maxProjectWidth / pixelsPerBeat * 60) / project.tempo;
         let startTimestamp: number | null = null;
@@ -169,7 +248,6 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
         viewport.scrollLeft = 0;
     }
 
-    // 6. 🛡️ DASHBOARD ANALYTICS: Update the top bar numbers
     const statNotes = document.getElementById('stat-notes');
     const statDuration = document.getElementById('stat-duration');
     if (statNotes && statDuration) {
