@@ -146,6 +146,7 @@ export function setupUI(recorder: AudioRecorder) {
     let isRecording = false;
 
     // 🛡️ NEW: Function to render the history list in the sidebar
+    // 🛡️ UPGRADED: Render the history list with Rename and Delete
     const renderHistoryList = () => {
         const list = document.getElementById('history-list');
         if (!list) return;
@@ -158,8 +159,8 @@ export function setupUI(recorder: AudioRecorder) {
             li.style.borderRadius = '6px';
             li.style.cursor = 'pointer';
             li.style.display = 'flex';
-            li.style.justifyContent = 'space-between';
-            li.style.alignItems = 'center';
+            li.style.flexDirection = 'column'; // Stack the name and notes
+            li.style.gap = '8px';
             li.style.border = '1px solid #444';
             li.style.transition = 'all 0.2s ease';
 
@@ -167,17 +168,81 @@ export function setupUI(recorder: AudioRecorder) {
             let totalNotes = 0;
             proj.tracks.forEach(t => totalNotes += t.notes.length);
 
-            li.innerHTML = `
-                <strong style="color: white; font-size: 0.9rem;">Take ${index + 1}</strong>
-                <span style="color: #888; font-size: 0.8rem;">${totalNotes} notes</span>
-            `;
+            // Use the custom name if it exists, otherwise default to "Take X"
+            const displayName = proj.name || `Take ${index + 1}`;
+
+            // --- TOP ROW: Name & Action Buttons ---
+            const topRow = document.createElement('div');
+            topRow.style.display = 'flex';
+            topRow.style.justifyContent = 'space-between';
+            topRow.style.alignItems = 'center';
+
+            const nameSpan = document.createElement('strong');
+            nameSpan.style.color = 'white';
+            nameSpan.style.fontSize = '0.9rem';
+            nameSpan.textContent = displayName;
+
+            const actionContainer = document.createElement('div');
+            actionContainer.style.display = 'flex';
+            actionContainer.style.gap = '5px';
+
+            // ✏️ Rename Button
+            const renameBtn = document.createElement('button');
+            renameBtn.textContent = '✏️';
+            renameBtn.style.background = 'none';
+            renameBtn.style.border = 'none';
+            renameBtn.style.cursor = 'pointer';
+            renameBtn.style.fontSize = '0.8rem';
+            renameBtn.style.padding = '2px';
+            renameBtn.title = "Rename Take";
+            renameBtn.onclick = (e) => {
+                e.stopPropagation(); // 🛡️ Stop the click from loading the file!
+                const newName = prompt("Enter a new name for this take:", displayName);
+                if (newName && newName.trim() !== "") {
+                    proj.name = newName.trim();
+                    saveHistory(projectHistory);
+                    renderHistoryList(); // Refresh the sidebar
+                }
+            };
+
+            // ❌ Delete Button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '❌';
+            deleteBtn.style.background = 'none';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.fontSize = '0.8rem';
+            deleteBtn.style.padding = '2px';
+            deleteBtn.title = "Delete Take";
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation(); // 🛡️ Stop the click from loading the file!
+                if (confirm(`Are you sure you want to delete "${displayName}"?`)) {
+                    projectHistory.splice(index, 1); // Remove from array
+                    saveHistory(projectHistory); // Save to storage
+                    renderHistoryList(); // Refresh the sidebar
+                }
+            };
+
+            actionContainer.appendChild(renameBtn);
+            actionContainer.appendChild(deleteBtn);
+            topRow.appendChild(nameSpan);
+            topRow.appendChild(actionContainer);
+
+            // --- BOTTOM ROW: Stats ---
+            const bottomRow = document.createElement('div');
+            bottomRow.style.color = '#888';
+            bottomRow.style.fontSize = '0.8rem';
+            bottomRow.textContent = `${totalNotes} notes`;
+
+            // Assemble the block
+            li.appendChild(topRow);
+            li.appendChild(bottomRow);
 
             li.onmouseover = () => { li.style.borderColor = '#646cff'; li.style.transform = 'translateX(2px)'; };
             li.onmouseout = () => { li.style.borderColor = '#444'; li.style.transform = 'translateX(0)'; };
 
-            // When a user clicks an old take, restore it!
+            // When a user clicks the background of the take, restore it!
             li.onclick = () => {
-                // We use JSON parse/stringify to create a clean, unlinked copy
                 currentMelody = JSON.parse(JSON.stringify(proj));
                 tempoSlider.value = currentMelody!.tempo.toString();
                 tempoDisplay.textContent = currentMelody!.tempo.toString();
@@ -209,6 +274,7 @@ export function setupUI(recorder: AudioRecorder) {
     };
 
     // Initialization
+    // Initialization
     if (currentMelody) {
         tempoSlider.value = currentMelody.tempo.toString();
         tempoDisplay.textContent = currentMelody.tempo.toString();
@@ -216,6 +282,21 @@ export function setupUI(recorder: AudioRecorder) {
         updateDashboardStats(currentMelody);
         exportBtn.disabled = false;
         appendBtn.disabled = false;
+    } else {
+        // 🛡️ INITIALIZATION FIX: If no save exists, create an empty Master Track
+        currentMelody = {
+            tempo: parseInt(tempoSlider.value),
+            key: "C",
+            tracks: [{
+                id: "master-track",
+                name: "Master Track",
+                instrument: parseInt(instrumentSelect.value),
+                notes: [],
+                volume: 1,
+                isMuted: false
+            }]
+        };
+        renderVisualizer(currentMelody, false);
     }
     renderHistoryList(); // Draw the list on startup
 
@@ -240,13 +321,26 @@ export function setupUI(recorder: AudioRecorder) {
     };
 
     clearBtn.onclick = () => {
-        snapshotCurrentToHistory(); // 🛡️ Save their work before wiping the desk!
+        snapshotCurrentToHistory(); // Save their work before wiping the desk!
 
-        currentMelody = null;
-        renderVisualizer({ tempo: parseInt(tempoSlider.value), key: "C", tracks: [] }, false);
+        // 🛡️ THE FIX: Instead of null, create a valid empty track
+        currentMelody = {
+            tempo: parseInt(tempoSlider.value),
+            key: "C",
+            tracks: [{
+                id: "master-track",
+                name: "Master Track",
+                instrument: parseInt(instrumentSelect.value),
+                notes: [],
+                volume: 1,
+                isMuted: false
+            }]
+        };
+
+        renderVisualizer(currentMelody, false);
         exportBtn.disabled = true;
         appendBtn.disabled = true;
-        autoSaveProject(null);
+        autoSaveProject(currentMelody); // Save the blank slate
 
         const statNotes = document.getElementById('stat-notes');
         const statDuration = document.getElementById('stat-duration');

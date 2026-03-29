@@ -137,15 +137,20 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
             const rootPitch = PIXEL_TO_NOTE[snappedTop];
 
             if (rootPitch) {
+                // 1. What are we drawing? (Single, Minor, Major)
                 const toolSelect = document.getElementById('draw-tool') as HTMLSelectElement;
                 const toolType = toolSelect ? toolSelect.value : 'single';
 
-                // Magic happens here!
+                // 2. How long is it? (16th, Quarter, Whole)
+                const sizeSelect = document.getElementById('draw-size') as HTMLSelectElement;
+                const noteDuration = sizeSelect ? parseFloat(sizeSelect.value) : 1;
+
+                // Magic happens here: Build the chord AND apply the duration!
                 const pitchesToDraw = buildChord(rootPitch, toolType);
 
                 track.notes.push({
                     pitches: pitchesToDraw,
-                    duration: 1,
+                    duration: noteDuration, // 🛡️ Now uses your selected duration
                     startTime: snappedStart,
                     velocity: 100
                 });

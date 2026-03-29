@@ -15,6 +15,7 @@ export interface Track {
 }
 
 export interface Project {
+    name?: string; // 🛡️ ADDED: Allows custom names for the history cabinet
     tempo: number;
     key: string;
     tracks: Track[];
