@@ -19,8 +19,8 @@ h1 {
 /* --- THE VISUALIZER --- */
 #visualizer-viewport {
     width: 100%;
-    max-width: 800px;
-    height: 450px; /* 🛡️ Increased to 450px so notes like G5 (20px) and C4 (380px) fit */
+    /*max-width: 800px;*/
+    /*height: 450px; !* 🛡️ Increased to 450px so notes like G5 (20px) and C4 (380px) fit *!*/
     background-color: #121217;
     border: 2px solid #333;
     border-radius: 12px;

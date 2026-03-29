@@ -64,7 +64,7 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
     if (keyboardPanel) {
         keyboardPanel.innerHTML = '';
         // Give the panel a white background so white keys look connected
-        keyboardPanel.style.backgroundColor = '#fefefe';
+        keyboardPanel.style.backgroundColor = '#1a1a24';
 
         Object.entries(NOTE_MAP).forEach(([noteName, topPos]) => {
             const isBlackKey = noteName.includes('#');
@@ -74,7 +74,7 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
             key.style.top = `${topPos}px`;
             key.style.width = isBlackKey ? '35px' : '100%';
             // Stretch the white keys slightly so they overlap perfectly
-            key.style.height = isBlackKey ? '20px' : '21px';
+            key.style.height = '20px';
 
             key.style.backgroundColor = isBlackKey ? '#222' : '#fefefe';
             key.style.borderBottom = '1px solid #ccc';
@@ -111,9 +111,9 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
         const lane = document.createElement('div');
         lane.className = 'track-lane';
         lane.style.position = 'relative';
-        lane.style.height = '420px'; // Fit all notes
+        lane.style.height = '100%'; // Fit all notes
         lane.style.width = '100%';
-        lane.style.backgroundColor = '#121217';
+        lane.style.backgroundColor = 'transparent';
 
         // Horizontal Grid Lines to match the keys
         Object.values(NOTE_MAP).forEach(topPos => {
@@ -228,7 +228,7 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
     playhead.style.display = project.tracks.length > 0 ? 'block' : 'none';
     playhead.style.zIndex = '9999';
     playhead.style.animation = 'none';
-    playhead.style.height = '420px';
+    playhead.style.height = '100%';
 
     if (isPlaying && project.tracks.length > 0) {
         const durationSecs = (maxProjectWidth / pixelsPerBeat * 60) / project.tempo;
