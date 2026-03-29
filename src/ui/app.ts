@@ -155,13 +155,13 @@ export function setupUI(recorder: AudioRecorder) {
         projectHistory.forEach((proj, index) => {
             const li = document.createElement('li');
             li.style.padding = '10px 15px';
-            li.style.background = '#2a2a35';
+            li.style.background = 'var(--bg-panel)';
             li.style.borderRadius = '6px';
             li.style.cursor = 'pointer';
             li.style.display = 'flex';
             li.style.flexDirection = 'column'; // Stack the name and notes
             li.style.gap = '8px';
-            li.style.border = '1px solid #444';
+            li.style.border = '1px solid var(--border-subtle)';
             li.style.transition = 'all 0.2s ease';
 
             // Calculate how many notes are in this old take
@@ -238,8 +238,8 @@ export function setupUI(recorder: AudioRecorder) {
             li.appendChild(topRow);
             li.appendChild(bottomRow);
 
-            li.onmouseover = () => { li.style.borderColor = '#646cff'; li.style.transform = 'translateX(2px)'; };
-            li.onmouseout = () => { li.style.borderColor = '#444'; li.style.transform = 'translateX(0)'; };
+            li.onmouseover = () => { li.style.borderColor = 'var(--brand-primary)'; li.style.transform = 'translateX(2px)'; };
+            li.onmouseout = () => { li.style.borderColor = 'var(--border-subtle)'; li.style.transform = 'translateX(0)'; };
 
             // When a user clicks the background of the take, restore it!
             li.onclick = () => {

@@ -1,194 +1,237 @@
-/* --- YOUR BASE STYLES --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* --- ENTERPRISE DESIGN SYSTEM --- */
+:root {
+    --bg-base: #09090b;       /* Deepest background */
+    --bg-surface: #18181b;    /* Sidebar/Header */
+    --bg-panel: #27272a;      /* Inputs/Cards */
+    --border-subtle: #3f3f46;
+    --text-main: #f4f4f5;
+    --text-muted: #a1a1aa;
+
+    --brand-primary: #6366f1; /* Indigo */
+    --brand-hover: #4f46e5;
+    --success: #10b981;       /* Emerald */
+    --danger: #ef4444;        /* Red */
+
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+}
+
 body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background-color: #1e1e24;
-    color: #ffffff;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- LAYOUT COMPONENTS --- */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+.sidebar {
+    width: 280px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-header h2 {
     margin: 0;
+    color: var(--text-main);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
 }
 
-h1 {
-    color: #646cff;
-    margin-bottom: 2rem;
-}
-
-/* --- THE VISUALIZER --- */
-#visualizer-viewport {
-    width: 100%;
-    /*max-width: 800px;*/
-    /*height: 450px; !* 🛡️ Increased to 450px so notes like G5 (20px) and C4 (380px) fit *!*/
-    background-color: #121217;
-    border: 2px solid #333;
-    border-radius: 12px;
-    position: relative;
-    margin-bottom: 20px;
-    overflow-x: auto;
+.sidebar-content {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     overflow-y: hidden;
 }
 
-/* Scrollbar Styling */
-#visualizer-viewport::-webkit-scrollbar {
-    height: 14px;
-    display: block;
+.section-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin: 0 0 10px 0;
 }
 
-#visualizer-viewport::-webkit-scrollbar-track {
-    background: #1a1a24;
-    border-radius: 0 0 10px 10px;
+.main-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-base);
+    min-width: 0; /* Prevents flex blowout */
 }
 
-#visualizer-viewport::-webkit-scrollbar-thumb {
-    background: #4b4b5e;
-    border-radius: 10px;
-    border: 2px solid #1a1a24;
+/* --- TOOLBARS & HEADERS --- */
+.top-header {
+    padding: 12px 24px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    box-sizing: border-box;
 }
 
-#visualizer-viewport::-webkit-scrollbar-thumb:hover {
-    background: #646cff;
+.control-bar {
+    padding: 16px 24px;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+}
+
+/* --- INPUTS & BUTTONS --- */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.input-group label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+input[type="text"], select {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    height: 36px;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus, select:focus {
+    border-color: var(--brand-primary);
+}
+
+.btn {
+    height: 36px;
+    padding: 0 16px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-primary { background: var(--brand-primary); color: white; }
+.btn-primary:hover { background: var(--brand-hover); }
+
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { filter: brightness(1.1); }
+
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { filter: brightness(1.1); }
+
+.btn-secondary { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-subtle); }
+.btn-secondary:hover { background: var(--border-subtle); }
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* --- THE PIANO ROLL --- */
+.workspace-area {
+    flex: 1;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.piano-roll-container {
+    flex: 1;
+    display: flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    background: var(--bg-base);
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+#piano-keyboard {
+    width: 60px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    z-index: 50;
+    position: relative;
+    flex-shrink: 0;
+}
+
+#visualizer-viewport {
+    flex: 1;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background-color: var(--bg-base);
 }
 
 #visualizer-canvas {
     position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    /* Width set dynamically in JS */
-    background-image: linear-gradient(#333 1px, transparent 1px);
+    top: 0; left: 0; height: 100%;
+    background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px);
     background-size: 100% 20px;
-    background-position: 0 0;
 }
 
 #playhead {
-    /* 🛡️ FIX: Defining the default value here stops the "Cannot resolve" error */
-    --scroll-width: 0px;
-
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background-color: #ff4757;
-    box-shadow: 0 0 15px #ff4757;
-    z-index: 10;
+    top: 0; left: 0; width: 2px; height: 100%;
+    background-color: var(--brand-primary);
+    box-shadow: 0 0 10px var(--brand-primary);
+    z-index: 100;
     display: none;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
-    animation-play-state: paused;
-}
-
-@keyframes movePlayhead {
-    from { transform: translateX(0); }
-    to { transform: translateX(var(--scroll-width)); } /* */
+    pointer-events: none;
 }
 
 .note-block {
     position: absolute;
-    background: linear-gradient(to bottom, #646cff, #535bf2);
-    border: 1px solid #ffffff33;
-    border-radius: 4px;
-    box-shadow: 0 0 8px #646cff66;
+    background: var(--brand-primary);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     cursor: grab;
-    -webkit-user-select: none;
     user-select: none;
-    touch-action: none;
-    transition: filter 0.1s ease;
 }
+.note-block:active { cursor: grabbing; filter: brightness(1.2); }
 
-.note-block:active {
-    cursor: grabbing;
-    filter: brightness(1.2);
-    z-index: 100;
-}
-
-/* --- UI CONTROLS --- */
-/* --- src/style.css --- */
-#prompt-input {
-    padding: 12px 20px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background-color: #2a2a35;
-    color: white;
-    /* 🛡️ DELETED width: 300px; */
-    /* 🛡️ DELETED margin: 20px 0 20px; */
-    width: 100%; /* Add this instead to fill its container */
-    box-sizing: border-box; /* Ensures padding doesn't cause overlap */
-}
-
-#generate-btn, #export-btn, #record-btn {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    border: none;
-    background-color: #646cff;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-#generate-btn:hover, #export-btn:hover {
-    background-color: #535bf2;
-}
-
-#generate-btn:disabled, #export-btn:disabled, #record-btn:disabled {
-    background-color: #444;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-#record-btn {
-    background-color: #ff4757;
-}
-
-#record-btn:hover {
-    background-color: #ff6b7a;
-}
-
-.controls {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    justify-content: center;
-}
-
-#play-btn {
-    background-color: #00b894;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    border: none;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-#play-btn:hover {
-    background-color: #55efc4;
-    transform: translateY(-1px);
-}
-
-#play-btn:active {
-    transform: translateY(1px);
-}
-
-#clear-btn {
-    background-color: #4b4b5e;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    border: none;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-#clear-btn:hover {
-    background-color: #ff4757;
-}
+/* Custom Scrollbar */
+::-webkit-scrollbar { height: 12px; width: 12px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 6px; border: 3px solid var(--bg-base); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

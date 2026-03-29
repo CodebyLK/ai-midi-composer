@@ -3,60 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enterprise AI Composer</title>
+    <title>AI Composer Pro</title>
     <link rel="stylesheet" href="./src/style.css">
 </head>
-<body style="margin: 0; padding: 0; overflow: hidden; background-color: #121217;">
+<body>
 
-<div style="display: flex; height: 100vh; width: 100vw; font-family: system-ui, sans-serif; color: white;">
+<div class="app-container">
 
-    <aside style="width: 260px; border-right: 1px solid #333; background: #1a1a24; display: flex; flex-direction: column;">
-        <div style="padding: 20px; border-bottom: 1px solid #333;">
-            <h2 style="margin: 0; color: #646cff; font-size: 1.2rem;">AI Composer Pro</h2>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>AI Composer Pro</h2>
         </div>
 
-        <div style="padding: 20px; flex: 1; display: flex; flex-direction: column;">
-            <h3 style="margin-top: 0; font-size: 0.9rem; color: #888; text-transform: uppercase;">Audio Input</h3>
-            <button id="record-btn" style="width: 100%; margin-bottom: 10px;">🎤 Record Real Piano</button>
+        <div class="sidebar-content">
+            <h3 class="section-title">Audio Input</h3>
+            <button id="record-btn" class="btn btn-danger" style="margin-bottom: 8px;">Record Real Piano</button>
             <div style="text-align: center; height: 20px;">
-                <span id="recording-status" style="display:none; color: #ff4757; font-weight: bold; font-size: 0.9rem;">🔴 Recording...</span>
+                <span id="recording-status" style="display:none; color: var(--danger); font-size: 0.75rem; font-weight: 600;">Recording...</span>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px;">
-                <h3 style="margin: 0; font-size: 0.9rem; color: #888; text-transform: uppercase;">Version History</h3>
-                <span id="save-status" style="color: #00b894; font-size: 0.75rem; display: none;">✓ Saved</span>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 24px;">
+                <h3 class="section-title">Version History</h3>
+                <span id="save-status" style="color: var(--success); font-size: 0.75rem; display: none;">Saved</span>
             </div>
 
-            <ul id="history-list" style="list-style: none; padding: 0; margin: 15px 0 0 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
+            <ul id="history-list" style="list-style: none; padding: 0; margin: 10px 0 0 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
             </ul>
         </div>
     </aside>
 
-    <main style="flex: 1; display: flex; flex-direction: column; background-color: #1e1e24; height: 100%;">
+    <main class="main-workspace">
 
-        <header style="padding: 15px 25px; background: #1a1a24; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div style="display: flex; gap: 15px; align-items: center;">
-                <button id="play-btn" style="height: 36px; padding: 0 15px; background: #00b894; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">▶ Play</button>
-                <button id="clear-btn" style="height: 36px; padding: 0 15px; background: #4b4b5e; border: none; color: white; border-radius: 4px; cursor: pointer;">🗑 Clear</button>
-                <button id="export-btn" style="height: 36px; padding: 0 15px; background: #646cff; border: none; color: white; border-radius: 4px; cursor: pointer;" disabled>⬇ MIDI</button>
+        <header class="top-header">
+            <div style="display: flex; gap: 12px;">
+                <button id="play-btn" class="btn btn-success">Play</button>
+                <button id="clear-btn" class="btn btn-secondary">Clear</button>
+                <button id="export-btn" class="btn btn-secondary" disabled>Export MIDI</button>
             </div>
 
-            <div style="font-size: 0.9rem; color: #aaa; display: flex; gap: 20px;">
-                <span>📊 Notes: <strong id="stat-notes" style="color: white;">0</strong></span>
-                <span>⏱️ Duration: <strong id="stat-duration" style="color: white;">0s</strong></span>
+            <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 24px; font-variant-numeric: tabular-nums;">
+                <span>Notes: <strong id="stat-notes" style="color: var(--text-main);">0</strong></span>
+                <span>Duration: <strong id="stat-duration" style="color: var(--text-main);">0s</strong></span>
             </div>
         </header>
 
-        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 15px; align-items: flex-end; border-bottom: 1px solid #333; flex-wrap: nowrap; flex-shrink: 0;">
+        <div class="control-bar">
 
-            <div style="display:flex; flex-direction:column; flex: 1; min-width: 200px;">
-                <label for="prompt-input" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">AI Composition Prompt</label>
-                <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression..." style="padding: 10px; border-radius: 4px; border: 1px solid #444; background: #2a2a35; color: white;" />
+            <div class="input-group" style="flex: 1; min-width: 200px;">
+                <label for="prompt-input">AI Prompt</label>
+                <input type="text" id="prompt-input" placeholder="e.g., A dramatic progression in C minor..." />
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
-                <label for="draw-tool" style="font-size: 0.8rem; color: #00b894; margin-bottom: 6px; font-weight: bold;">✏️ Draw Tool</label>
-                <select id="draw-tool" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #00b894; cursor: pointer;">
+            <div class="input-group" style="width: 120px;">
+                <label for="draw-tool">Draw Tool</label>
+                <select id="draw-tool">
                     <option value="single">Single Note</option>
                     <option value="major">Major Triad</option>
                     <option value="minor">Minor Triad</option>
@@ -64,9 +64,9 @@
                 </select>
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 120px; flex-shrink: 0;">
-                <label for="draw-size" style="font-size: 0.8rem; color: #00b894; margin-bottom: 6px; font-weight: bold;">⏱️ Note Size</label>
-                <select id="draw-size" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #00b894; cursor: pointer;">
+            <div class="input-group" style="width: 110px;">
+                <label for="draw-size">Note Size</label>
+                <select id="draw-size">
                     <option value="0.25">16th Note</option>
                     <option value="0.5">8th Note</option>
                     <option value="1" selected>Quarter</option>
@@ -75,19 +75,19 @@
                 </select>
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 100px; flex-shrink: 0;">
-                <label for="length-select" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Length</label>
-                <select id="length-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+            <div class="input-group" style="width: 90px;">
+                <label for="length-select">Length</label>
+                <select id="length-select">
                     <option value="4 bars">4 Bars</option>
                     <option value="8 bars" selected>8 Bars</option>
                     <option value="16 bars">16 Bars</option>
                 </select>
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
-                <label for="instrument-select" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">Instrument</label>
-                <select id="instrument-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444; cursor: pointer;">
-                    <option value="1" selected>Acoustic Grand Piano</option>
+            <div class="input-group" style="width: 140px;">
+                <label for="instrument-select">Instrument</label>
+                <select id="instrument-select">
+                    <option value="1" selected>Acoustic Piano</option>
                     <option value="25">Acoustic Guitar</option>
                     <option value="40">Synth Bass</option>
                     <option value="41">Violin</option>
@@ -96,31 +96,26 @@
                 </select>
             </div>
 
-            <div style="display:flex; flex-direction:column; width: 140px; flex-shrink: 0;">
-                <label for="tempo-slider" style="font-size: 0.8rem; color: #888; margin-bottom: 6px;">BPM: <span id="tempo-display">120</span></label>
-                <div style="background: #2a2a35; padding: 8px 10px; border-radius: 4px; border: 1px solid #444; display: flex; align-items: center;">
-                    <input type="range" id="tempo-slider" min="60" max="200" value="120" style="width: 100%;" />
+            <div class="input-group" style="width: 120px;">
+                <label for="tempo-slider">BPM: <span id="tempo-display">120</span></label>
+                <div style="height: 36px; display: flex; align-items: center;">
+                    <input type="range" id="tempo-slider" min="60" max="200" value="120" style="width: 100%; margin: 0;" />
                 </div>
             </div>
 
-            <div style="display: flex; gap: 10px; flex-shrink: 0;">
-                <button id="generate-btn" style="height: 42px; padding: 0 15px; background: #646cff; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;">✨ New</button>
-                <button id="append-btn" style="height: 42px; padding: 0 15px; background: #00b894; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;" disabled>➕ Append</button>
+            <div style="display: flex; gap: 8px;">
+                <button id="generate-btn" class="btn btn-primary">Generate</button>
+                <button id="append-btn" class="btn btn-success" disabled>Append</button>
             </div>
         </div>
 
-        <div style="flex: 1; padding: 25px; overflow: hidden; display: flex; flex-direction: column;">
-
-            <div style="display: flex; flex: 1; border: 2px solid #333; border-radius: 8px; overflow: hidden; background: #121217; position: relative;">
-
-                <div id="piano-keyboard" style="width: 60px; background: #1a1a24; border-right: 2px solid #000; z-index: 50; position: relative; overflow-y: hidden; flex-shrink: 0;">
-                </div>
-
-                <div id="visualizer-viewport" style="flex: 1; position: relative; overflow-x: auto; overflow-y: hidden;">
+        <div class="workspace-area">
+            <div class="piano-roll-container">
+                <div id="piano-keyboard"></div>
+                <div id="visualizer-viewport">
                     <div id="playhead"></div>
                     <div id="visualizer-canvas"></div>
                 </div>
-
             </div>
         </div>
 
