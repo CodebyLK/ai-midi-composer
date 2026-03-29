@@ -86,6 +86,9 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
                         if (finalPitch) {
                             track.notes[nIdx].pitches[pIdx] = finalPitch;
                             track.notes[nIdx].startTime = finalLeft / pixelsPerBeat;
+
+                            // 🛡️ ENTERPRISE: Auto-save manual edits!
+                            localStorage.setItem('enterprise_daw_workspace', JSON.stringify(project));
                         }
                         document.removeEventListener('mousemove', move);
                         document.removeEventListener('mouseup', up);
@@ -144,4 +147,20 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
         playhead.style.transform = `translateX(0px)`;
         viewport.scrollLeft = 0;
     }
-}
+
+    // 🛡️ ENTERPRISE: Update Dashboard Analytics
+    const statNotes = document.getElementById('stat-notes');
+    const statDuration = document.getElementById('stat-duration');
+    if (statNotes && statDuration) {
+        let totalNotes = 0;
+        let maxTime = 0;
+        project.tracks.forEach(t => {
+            totalNotes += t.notes.length;
+            t.notes.forEach(n => maxTime = Math.max(maxTime, n.startTime + n.duration));
+        });
+        const durationSecs = (maxTime * 60) / project.tempo;
+        statNotes.textContent = totalNotes.toString();
+        statDuration.textContent = durationSecs.toFixed(1) + "s";
+    }
+} // <-- This is the closing brace of renderVisualizer
+

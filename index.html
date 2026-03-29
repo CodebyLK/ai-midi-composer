@@ -3,57 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Midi Composer</title>
+    <title>Enterprise AI Composer</title>
     <link rel="stylesheet" href="/src/style.css">
 </head>
-<body>
-<h1>AI Midi Composer</h1>
+<body style="margin: 0; padding: 0; overflow: hidden; background-color: #121217;">
 
-<div id="visualizer-viewport">
-    <div id="playhead"></div>
-    <div id="visualizer-canvas"></div>
-</div>
+<div style="display: flex; height: 100vh; width: 100vw; font-family: system-ui, sans-serif; color: white;">
 
-<input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression in C minor" />
+    <aside style="width: 260px; border-right: 1px solid #333; background: #1a1a24; display: flex; flex-direction: column;">
+        <div style="padding: 20px; border-bottom: 1px solid #333;">
+            <h2 style="margin: 0; color: #646cff; font-size: 1.2rem;">AI Composer Pro</h2>
+        </div>
 
-<div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; justify-content: center;">
-    <div>
-        <label for="tempo-slider">Tempo: <span id="tempo-display">120</span> BPM</label>
-        <input type="range" id="tempo-slider" min="60" max="200" value="120" />
-    </div>
-    <div>
-        <label for="length-select">Length:</label>
-        <select id="length-select" style="padding: 5px; border-radius: 4px; background: #2a2a35; color: white;">
-            <option value="4 bars">4 Bars</option>
-            <option value="8 bars" selected>8 Bars</option>
-            <option value="16 bars">16 Bars</option>
-        </select>
-    </div>
-    <div>
-        <label for="instrument-select">Instrument:</label>
-        <select id="instrument-select" style="padding: 5px; border-radius: 4px; background: #2a2a35; color: white;">
-            <option value="1" selected>Acoustic Grand Piano</option>
-            <option value="25">Acoustic Guitar</option>
-            <option value="40">Synth Bass</option>
-            <option value="41">Violin</option>
-            <option value="57">Trumpet</option>
-            <option value="74">Flute</option>
-        </select>
-    </div>
-</div>
+        <div style="padding: 20px; flex: 1;">
+            <h3 style="margin-top: 0; font-size: 0.9rem; color: #888; text-transform: uppercase;">Audio Input</h3>
+            <button id="record-btn" style="width: 100%; margin-bottom: 10px;">🎤 Record Real Piano</button>
+            <div style="text-align: center; height: 20px;">
+                <span id="recording-status" style="display:none; color: #ff4757; font-weight: bold; font-size: 0.9rem;">🔴 Recording...</span>
+            </div>
 
-<div class="controls">
-    <button id="generate-btn">Generate New AI Melody</button>
-    <button id="play-btn">▶ Play Current</button>
-    <button id="clear-btn">🗑 Clear Grid</button> <button id="export-btn" disabled>Download MIDI</button>
-</div>
+            <h3 style="margin-top: 20px; font-size: 0.9rem; color: #888; text-transform: uppercase;">Session</h3>
+            <div id="save-status" style="color: #00b894; font-size: 0.8rem; display: none;">✓ Auto-saved to Workspace</div>
+        </div>
+    </aside>
 
-<div class="recorder-section" style="margin-top: 20px; padding: 15px; border-radius: 8px; width: 100%; max-width: 400px; text-align: center;">
-    <button id="record-btn">🎤 Record Real Piano</button>
-    <div style="margin-top: 10px;">
-        <span id="recording-status" style="display:none; color: #ff4757; font-weight: bold;">🔴 Recording...</span>
-    </div>
-    <audio id="audio-playback" controls style="display:none; margin-top:10px; width: 100%;"></audio>
+    <main style="flex: 1; display: flex; flex-direction: column; background-color: #1e1e24;">
+
+        <header style="padding: 15px 25px; background: #1a1a24; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <button id="play-btn">▶ Play</button>
+                <button id="clear-btn">🗑 Clear</button>
+                <button id="export-btn" disabled>⬇ Download MIDI</button>
+            </div>
+
+            <div style="font-size: 0.9rem; color: #aaa; display: flex; gap: 20px;">
+                <span>📊 Notes: <strong id="stat-notes" style="color: white;">0</strong></span>
+                <span>⏱️ Duration: <strong id="stat-duration" style="color: white;">0s</strong></span>
+            </div>
+        </header>
+
+        <div style="padding: 15px 25px; background: #23232b; display: flex; gap: 15px; align-items: center; border-bottom: 1px solid #333;">
+            <input type="text" id="prompt-input" placeholder="e.g., A dramatic chord progression in C minor" style="flex: 1; max-width: 400px; margin: 0;" />
+
+            <select id="length-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+                <option value="4 bars">4 Bars</option>
+                <option value="8 bars" selected>8 Bars</option>
+            </select>
+
+            <select id="instrument-select" style="padding: 10px; border-radius: 4px; background: #2a2a35; color: white; border: 1px solid #444;">
+                <option value="1" selected>Acoustic Piano</option>
+                <option value="40">Synth Bass</option>
+            </select>
+
+            <div style="display: flex; align-items: center; gap: 10px; background: #2a2a35; padding: 5px 15px; border-radius: 4px; border: 1px solid #444;">
+                <label for="tempo-slider" style="font-size: 0.9rem;">BPM: <span id="tempo-display">120</span></label>
+                <input type="range" id="tempo-slider" min="60" max="200" value="120" style="width: 80px;" />
+            </div>
+
+            <button id="generate-btn">✨ Generate AI</button>
+        </div>
+
+        <div style="flex: 1; padding: 25px; overflow: hidden; display: flex; flex-direction: column;">
+            <div id="visualizer-viewport" style="flex: 1; width: 100%; max-width: 100%; margin: 0;">
+                <div id="playhead"></div>
+                <div id="visualizer-canvas"></div>
+            </div>
+        </div>
+
+    </main>
 </div>
 
 <script type="module" src="/src/main.ts"></script>

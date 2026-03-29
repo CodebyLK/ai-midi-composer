@@ -5,6 +5,36 @@ import { AudioRecorder } from '../audio/recorder';
 import { convertAudioToNotes } from '../audio/transcriber';
 import type { Project, Note } from '../types';
 
+// --- ENTERPRISE STATE MANAGEMENT ---
+const STORAGE_KEY = 'enterprise_daw_workspace';
+
+export function autoSaveProject(project: Project | null) {
+    try {
+        if (project) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+            // Briefly show a "Saved" indicator in the UI
+            const status = document.getElementById('save-status');
+            if (status) {
+                status.style.display = 'block';
+                setTimeout(() => status.style.display = 'none', 2000);
+            }
+        } else {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    } catch (e) {
+        console.error("Local storage disabled", e);
+    }
+}
+
+function loadSavedProject(): Project | null {
+    try {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        return savedData ? JSON.parse(savedData) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 // --- HELPER: WRAP DATA FOR TYPES ---
 const getMockProject = (tempo: number, instrument: number): Project => ({
     tempo: tempo,
@@ -79,21 +109,29 @@ export function setupUI(recorder: AudioRecorder) {
     const instrumentSelect = document.getElementById('instrument-select') as HTMLSelectElement;
     const recordingStatus = document.getElementById('recording-status') as HTMLElement;
 
-    let currentMelody: Project | null = null;
+    // 🛡️ INITIAL LOAD: Restore session if it exists
+    let currentMelody: Project | null = loadSavedProject();
     let isRecording = false;
+
+    if (currentMelody) {
+        tempoSlider.value = currentMelody.tempo.toString();
+        tempoDisplay.textContent = currentMelody.tempo.toString();
+        renderVisualizer(currentMelody, false);
+        exportBtn.disabled = false;
+    }
 
     tempoSlider.oninput = () => {
         if (tempoDisplay) tempoDisplay.textContent = tempoSlider.value;
         if (currentMelody) {
             currentMelody.tempo = parseInt(tempoSlider.value);
             renderVisualizer(currentMelody, false);
+            autoSaveProject(currentMelody); // 🛡️ Save on tempo change
         }
     };
 
-    // 🛡️ Added 'async' and 'await' to clear Promise warnings
     playBtn.onclick = async () => {
         if (currentMelody) {
-            renderVisualizer(currentMelody, true); // Pass true to start playhead
+            renderVisualizer(currentMelody, true);
             await playMelody(currentMelody, parseInt(instrumentSelect.value));
         } else {
             alert("Record or generate a melody first!");
@@ -102,9 +140,9 @@ export function setupUI(recorder: AudioRecorder) {
 
     clearBtn.onclick = () => {
         currentMelody = null;
-        // 🛡️ Ensure clear logic sends a valid Project object
         renderVisualizer({ tempo: parseInt(tempoSlider.value), key: "C", tracks: [] }, false);
         exportBtn.disabled = true;
+        autoSaveProject(null); // 🛡️ Clear local storage
     };
 
     generateBtn.onclick = async () => {
@@ -139,13 +177,14 @@ export function setupUI(recorder: AudioRecorder) {
                 alert("The AI had stage fright. Try again.");
             }
             generateBtn.disabled = false;
-            generateBtn.textContent = "Generate New AI Melody";
+            generateBtn.textContent = "✨ Generate AI";
         }
 
         if (currentMelody) {
             renderVisualizer(currentMelody, false);
             await playMelody(currentMelody, inst);
             exportBtn.disabled = false;
+            autoSaveProject(currentMelody); // 🛡️ Save successful generation
         }
     };
 
@@ -172,8 +211,11 @@ export function setupUI(recorder: AudioRecorder) {
                         isMuted: false
                     }]
                 };
-                if (currentMelody) renderVisualizer(currentMelody, false);
-                exportBtn.disabled = false;
+                if (currentMelody) {
+                    renderVisualizer(currentMelody, false);
+                    exportBtn.disabled = false;
+                    autoSaveProject(currentMelody); // 🛡️ Save successful recording
+                }
             } catch (err) {
                 console.error(err);
                 alert("Transcription failed. Play clearly!");
