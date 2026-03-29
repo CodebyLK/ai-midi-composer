@@ -11,21 +11,29 @@ const PIXEL_TO_NOTE: Record<number, string> = Object.fromEntries(
     Object.entries(NOTE_MAP).map(([note, pos]) => [pos, note])
 );
 
-// 🛡️ CRITICAL FIX: Added 'isPlaying' flag. Defaults to false.
+let currentAnimId: number | null = null;
+
 export function renderVisualizer(project: Project, isPlaying: boolean = false) {
     const canvas = document.getElementById('visualizer-canvas');
-    const playhead = document.getElementById('playhead');
     const viewport = document.getElementById('visualizer-viewport');
+    const playhead = document.getElementById('playhead');
     const instSelect = document.getElementById('instrument-select') as HTMLSelectElement;
 
-    if (!canvas || !playhead || !viewport) return;
+    if (!canvas || !viewport || !playhead) return;
 
+    // 1. Kill any existing animation
+    if (currentAnimId) {
+        cancelAnimationFrame(currentAnimId);
+        currentAnimId = null;
+    }
+
+    // 2. Wipe the canvas completely clean
     canvas.innerHTML = '';
-    canvas.appendChild(playhead);
 
     const pixelsPerBeat = 100;
-    let maxProjectWidth = 800;
+    let maxProjectWidth = viewport.clientWidth;
 
+    // 3. Draw the Lanes and Notes (Your exact original logic)
     project.tracks.forEach((track: Track, index: number) => {
         const lane = document.createElement('div');
         lane.className = 'track-lane';
@@ -92,30 +100,48 @@ export function renderVisualizer(project: Project, isPlaying: boolean = false) {
     });
 
     canvas.style.width = `${maxProjectWidth}px`;
+
+    // 🛡️ THE LAYER FIX: Move the playhead to the very end of the viewport
+    // This physically guarantees it renders ON TOP of everything else.
+    viewport.appendChild(playhead);
+
     playhead.style.display = project.tracks.length > 0 ? 'block' : 'none';
-    playhead.style.setProperty('--scroll-width', `${maxProjectWidth}px`);
+    playhead.style.zIndex = '9999';
+    playhead.style.animation = 'none'; // Overrides the broken CSS animations
 
-    // 🛡️ CRITICAL FIX: Only animate if the Play button was actually clicked
-    if (isPlaying) {
-        const secs = (maxProjectWidth / pixelsPerBeat * 60) / project.tempo;
-        playhead.style.animation = 'none';
-        playhead.offsetHeight;
-        playhead.style.animation = `movePlayhead ${secs}s linear forwards`;
+    // 4. 🛡️ THE BULLETPROOF ANIMATION LOOP
+    if (isPlaying && project.tracks.length > 0) {
+        const durationSecs = (maxProjectWidth / pixelsPerBeat * 60) / project.tempo;
 
-        let animId: number;
-        const sync = () => {
-            const tr = window.getComputedStyle(playhead).transform;
-            if (tr && tr !== 'none') {
-                const x = parseFloat(tr.split(',')[4]);
-                viewport.scrollLeft = x - (viewport.clientWidth / 2);
+        // We MUST start this as null so we can grab the exact browser timestamp on the very first frame
+        let startTimestamp: number | null = null;
+
+        const sync = (timestamp: number) => {
+            // Initialize the clock using the engine's internal timer
+            if (!startTimestamp) startTimestamp = timestamp;
+
+            const elapsed = (timestamp - startTimestamp) / 1000;
+            const progress = Math.min(elapsed / durationSecs, 1);
+
+            // Mathematically calculate the exact pixel distance
+            const x = progress * maxProjectWidth;
+
+            // Move the playhead directly
+            playhead.style.transform = `translateX(${x}px)`;
+
+            // Lock the camera to the playhead
+            viewport.scrollLeft = Math.max(0, x - (viewport.clientWidth / 2));
+
+            // Loop until finished
+            if (progress < 1) {
+                currentAnimId = requestAnimationFrame(sync);
             }
-            animId = requestAnimationFrame(sync);
         };
-        animId = requestAnimationFrame(sync);
-        playhead.onanimationend = () => cancelAnimationFrame(animId);
+
+        currentAnimId = requestAnimationFrame(sync);
     } else {
-        // Reset playhead to start
-        playhead.style.animation = 'none';
+        // Reset the playhead to start
+        playhead.style.transform = `translateX(0px)`;
         viewport.scrollLeft = 0;
     }
 }
